@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Alchemists | Cert Validator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #f4f4f9; padding-top: 50px; }
+        .card { background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #4A90E2; }
+        button { background: #4A90E2; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📜 Cert Validator</h1>
+        <p>Upload a certificate to verify its authenticity.</p>
+        <form action="/verify" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" required><br><br>
+            <button type="submit">Start Verification</button>
+        </form>
+    </div>
+</body>
+</html>

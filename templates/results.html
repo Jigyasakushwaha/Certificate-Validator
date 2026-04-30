@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Alchemist Forensic Report</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; }
+        .flex { display: flex; justify-content: center; gap: 20px; padding: 20px; }
+        img { max-width: 45%; border: 2px solid #444; }
+        .verified { color: #00ff00; }
+        .fake { color: #ff4444; }
+    </style>
+</head>
+<body>
+    <h1 class="{{ 'verified' if 'VERIFIED' in status else 'fake' }}">{{ status }}</h1>
+    
+   <div class="flex">
+    <div>
+        <h3>Standard View</h3>
+        <img src="{{ url_for('static', filename=original_img) }}">
+    </div>
+    <div>
+        <h3>Forensic (ELA) Map</h3>
+        <img src="{{ url_for('static', filename=forensic_img) }}">
+    </div>
+</div>
+    </div>
+    <p>Note: Bright "glowing" spots indicate potential digital tampering.</p>
+    <a href="/" style="color: white;">Upload another</a>
+</body>
+</html>
