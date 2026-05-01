@@ -1,4 +1,4 @@
 firebase_key.json
 *.json
-.env
+.envg
 __pycache__/
