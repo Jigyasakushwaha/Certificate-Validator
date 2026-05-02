@@ -3,9 +3,9 @@ import numpy as np
 import os
 import pytesseract
 import re
-from pyzbar.pyzbar import decode  # New import for QR detection
+from pyzbar.pyzbar import decode
 
-# --- YOUR EXISTING ELA CODE (DO NOT TOUCH) ---
+# --- YOUR EXISTING ELA CODE (UNTOUCHED) ---
 def run_ela(image_path, quality=90):
     try:
         original = cv2.imread(image_path)
@@ -36,66 +36,72 @@ def run_ela(image_path, quality=90):
         print(f"ELA ERROR: {e}")
         return None
 
-# --- NEW NECESSARY ADDITIONS FOR OCR ACCURACY ---
+# --- NEW: BLUR DETECTION (To prevent False Positives) ---
+
+def calculate_blur(image_path):
+    """Returns a score: higher is sharper, lower is blurrier"""
+    img = cv2.imread(image_path)
+    if img is None: return 0
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Variance of Laplacian measures the 'sharpness' of edges
+    return cv2.Laplacian(gray, cv2.CV_64F).var()
+
+# --- OCR PREPROCESSING ---
 
 def preprocess_for_ocr(image_path):
-    """Cleans the image to make text pop for Tesseract"""
     img = cv2.imread(image_path)
-    if img is None:
-        return None
+    if img is None: return None
     
-    # Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Bilateral Filter removes noise while keeping edges (better than Gaussian for OCR)
+    denoised = cv2.bilateralFilter(gray, 9, 75, 75)
     
-    # Use Adaptive Thresholding to handle uneven lighting/shadows
     processed_img = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
         cv2.THRESH_BINARY, 11, 2
     )
-    
     return processed_img
 
-# --- NEW QR CODE FEATURE ---
+# --- QR CODE FEATURE ---
 
 def scan_qr_code(image_path):
-    """Detects and decodes QR codes from the image"""
     try:
         img = cv2.imread(image_path)
-        if img is None:
-            return None
-        
-        # Detect and decode
+        if img is None: return None
         decoded_objects = decode(img)
-        
         if decoded_objects:
-            # Return the data from the first QR code found
             return decoded_objects[0].data.decode('utf-8')
         return None
     except Exception as e:
         print(f"QR Error: {e}")
         return None
 
+# --- MAIN EXTRACTION LOGIC ---
+
 def extract_certificate_data(image_path):
-    """Main function to be called from app.py to get text results"""
+    """Main function to get results with quality checking"""
     
-    # 1. First, attempt to get ID from QR code (Highest Accuracy)
+    # 1. Check Image Quality first
+    blur_score = calculate_blur(image_path)
+    quality_status = "Good" if blur_score > 100 else "Low/Blurry"
+    
+    # 2. QR/OCR Extraction
     qr_id = scan_qr_code(image_path)
-    
-    # 2. Run OCR Preprocessing for full text extraction
     processed_img = preprocess_for_ocr(image_path)
-    if processed_img is None:
-        return "Error processing image", None
     
-    # OCR Extraction
+    if processed_img is None:
+        return "Error processing image", "N/A", "Critically Low"
+    
     raw_text = pytesseract.image_to_string(processed_img)
     
-    # 3. Handle ID Logic: Prioritize QR, Fallback to Regex
+    # 3. ID Priority
     if qr_id:
         cert_id = qr_id
     else:
-        # Find Certificate ID using Regex if QR is not found
-        id_pattern = r'[A-Z0-9]{4,}' 
+        # Improved Regex to be more specific to IDs
+        id_pattern = r'\b[A-Z0-9-]{6,}\b' 
         found_ids = re.findall(id_pattern, raw_text)
-        cert_id = found_ids[0] if found_ids else "Not Found"
+        cert_id = found_ids[0] if found_ids else "NOT_FOUND"
     
-    return raw_text, cert_id
+    # Returns: Raw Text, ID, and Quality Status for app.py to use
+    return raw_text, cert_id, quality_status
