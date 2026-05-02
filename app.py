@@ -2,86 +2,90 @@ import os
 import re
 import pytesseract
 from PIL import Image
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# Import your forensic engine
 from forensics import run_ela
 
 app = Flask(__name__)
+CORS(app)
 
-# --- 1. SETTINGS & FOLDERS ---
+
+# OCR setup
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-# Ensure the static/uploads folder exists for the images to show on web
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Firebase initialization
+# Firebase init
 if not firebase_admin._apps:
     cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)
+
 db = firestore.client()
 
-# --- 2. ROUTES ---
-
 @app.route('/')
-def home():
+def index():
     return render_template('index.html')
 
 @app.route('/verify', methods=['POST'])
 def verify():
-    if 'file' not in request.files:
-        return "No file part"
-    
-    file = request.files['file']
-    if file.filename == '':
-        return "No selected file"
+    # Matches the 'file' key appended in your index.html JS
+    files = request.files.getlist('file')
 
-    # A. Save the file
-    img_filename = "latest_check.jpg"
-    img_path = os.path.join(UPLOAD_FOLDER, img_filename)
-    file.save(img_path)
+    if not files:
+        return jsonify({"error": "No files uploaded"}), 400
 
-    # B. Run Forensic Test
-    ela_filename = run_ela(img_path)
+    results = []
 
-    # C. OCR Step (Read the text)
-    extracted_text = pytesseract.image_to_string(Image.open(img_path))
-    print(f"DEBUG: AI found this text -> {extracted_text}")
+    for file in files:
+        if file.filename == '':
+            continue
 
-    # D. Define Pattern & Search (IMPORTANT: Define the pattern FIRST)
-    # This pattern catches the '-1' at the end!
-    id_pattern = r'[A-Z]{3,4}-\d{4}(?:-\d+)?' 
-    
-    found_ids = re.findall(id_pattern, extracted_text)
+        safe_name = file.filename.replace(" ", "_")
+        img_path = os.path.join(UPLOAD_FOLDER, safe_name)
+        file.save(img_path)
 
-    # E. Logic & Database Check
-    status = "❌ INVALID FORMAT"
-    details = "No valid Certificate ID pattern recognized."
-    
-    if found_ids:
-        detected_id = found_ids[0].strip()
-        print(f"DEBUG: AI extracted this ID -> {detected_id}")
+        # Forensic analysis
+        ela_filename = run_ela(img_path)
+
+        # OCR
+        try:
+            extracted_text = pytesseract.image_to_string(Image.open(img_path))
+        except:
+            extracted_text = ""
         
-        # Check Firebase for the ID
-        doc = db.collection('certificates').document(detected_id).get()
-        
-        if doc.exists:
-            data = doc.to_dict()
-            status = f"✅ VERIFIED: {detected_id}"
-            details = f"Certificate belongs to: {data.get('Name')}"
-        else:
-            status = "⚠️ UNREGISTERED ID"
-            details = f"ID {detected_id} found on paper, but not in official records."
+        # Regex for ID (e.g., ABC-1234)
+        id_pattern = r'[A-Z]{3,4}-\d{4}(?:-\d+)?'
+        found_ids = re.findall(id_pattern, extracted_text)
 
-    # F. Render Results
-    return render_template('results.html', 
-                           status=status, 
-                           info=details,
-                           original_img='uploads/' + img_filename, 
-                           forensic_img=ela_filename)
+        status = "❌ INVALID FORMAT"
+        details = "No valid Certificate ID found on document"
+
+        if found_ids:
+            detected_id = found_ids[0].strip()
+            doc = db.collection('certificates').document(detected_id).get()
+
+            if doc.exists:
+                data = doc.to_dict()
+                status = f"✅ VERIFIED"
+                details = f"ID: {detected_id} | Owner: {data.get('Name', 'Unknown')}"
+            else:
+                status = "⚠️ UNREGISTERED"
+                details = f"ID {detected_id} not found in database"
+
+        results.append({
+            "name": file.filename,
+            "status": status,
+            "info": details,
+            "original_img": f"uploads/{safe_name}",
+            "forensic_img": ela_filename
+        })
+
+    # Return as JSON for the index.html to process
+    return jsonify(results)
+
 if __name__ == "__main__":
     app.run(debug=True)

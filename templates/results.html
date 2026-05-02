@@ -2,29 +2,201 @@
 <html>
 <head>
     <title>Alchemist Forensic Report</title>
+
     <style>
-        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; }
-        .flex { display: flex; justify-content: center; gap: 20px; padding: 20px; }
-        img { max-width: 45%; border: 2px solid #444; }
-        .verified { color: #00ff00; }
-        .fake { color: #ff4444; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
+        }
+
+        /* subtle grid background (removes emptiness) */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 22px 22px;
+            opacity: 0.6;
+            z-index: -1;
+        }
+
+        /* TOP HEADER */
+        .header {
+            text-align: center;
+            padding: 30px 20px 10px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+            letter-spacing: 0.3px;
+        }
+
+        /* STATUS */
+        .status {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .verified {
+            background: #ecfdf5;
+            color: #16a34a;
+            border: 1px solid #86efac;
+        }
+
+        .fake {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+        }
+
+        /* MAIN CONTAINER */
+        .container {
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        /* REPORT CARD */
+        .report {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+
+        /* ANALYSIS STRIP */
+        .strip {
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 12px 18px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* GRID */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 18px;
+        }
+
+        /* IMAGE CARDS */
+        .card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fafafa;
+        }
+
+        .card h3 {
+            margin: 0;
+            padding: 12px;
+            font-size: 13px;
+            background: #f3f4f6;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card img {
+            width: 100%;
+            display: block;
+        }
+
+        /* INFO SECTION */
+        .info {
+            padding: 0 18px 18px;
+        }
+
+        .note {
+            background: #f8fafc;
+            border-left: 4px solid #6366f1;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #374151;
+        }
+
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            margin: 20px 0 40px;
+        }
+
+        .footer a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 800px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
+
 <body>
-    <h1 class="{{ 'verified' if 'VERIFIED' in status else 'fake' }}">{{ status }}</h1>
-    
-   <div class="flex">
-    <div>
-        <h3>Standard View</h3>
-        <img src="{{ url_for('static', filename=original_img) }}">
+
+    <!-- HEADER -->
+    <div class="header">
+
+        <h1>Forensic Certificate Analysis Report</h1>
+
+        <div class="status {{ 'verified' if 'VERIFIED' in status else 'fake' }}">
+            {{ status }}
+        </div>
+
     </div>
-    <div>
-        <h3>Forensic (ELA) Map</h3>
-        <img src="{{ url_for('static', filename=forensic_img) }}">
+
+    <!-- REPORT -->
+    <div class="container">
+
+        <div class="report">
+
+            <div class="strip">
+                Automated Analysis Engine • Error Level Forensics • Authenticity Check
+            </div>
+
+            <div class="grid">
+
+                <div class="card">
+                    <h3>Original Certificate</h3>
+                    <img src="{{ url_for('static', filename=original_img) }}">
+                </div>
+
+                <div class="card">
+                    <h3>Error Level Analysis (ELA)</h3>
+                    <img src="{{ url_for('static', filename=forensic_img) }}">
+                </div>
+
+            </div>
+
+            <div class="info">
+                <div class="note">
+                    Bright or inconsistent regions in the ELA map may indicate digital manipulation, compression differences, or tampering attempts.
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <a href="{{ url_for('index') }}">← Analyze another certificate</a>
+        </div>
+
     </div>
-</div>
-    </div>
-    <p>Note: Bright "glowing" spots indicate potential digital tampering.</p>
-    <a href="/" style="color: white;">Upload another</a>
+
 </body>
 </html>

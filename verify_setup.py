@@ -3,21 +3,25 @@ from PIL import Image
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# 1. TELL PYTHON WHERE THE OCR ENGINE IS
-# Ensure this path matches exactly where you installed the .exe
+# 1. PATH SETUP
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-# 2. CONNECT TO THE BRAIN (FIREBASE)
+print("--- System Diagnostic ---")
+
+# 2. FIREBASE CHECK
 try:
-    cred = credentials.Certificate("firebase_key.json")
-    firebase_admin.initialize_app(cred)
+    if not firebase_admin._apps:
+        cred = credentials.Certificate("firebase_key.json")
+        firebase_admin.initialize_app(cred)
     db = firestore.client()
-    print("✅ SUCCESS: Firebase is connected!")
+    print("✅ SUCCESS: Firebase Connected.")
 except Exception as e:
-    print(f"❌ ERROR: Firebase failed. Did you move the .json file? {e}")
+    print(f"❌ ERROR: Firebase Failed: {e}")
+
+# 3. OCR CHECK
 try:
-    # This just asks Tesseract for its version number
     version = pytesseract.get_tesseract_version()
-    print(f"✅ SUCCESS: OCR is connected! (Version {version})")
+    print(f"✅ SUCCESS: OCR Engine Detected (v{version}).")
 except Exception as e:
-    print(f"❌ ERROR: OCR failed. Check the path in line 7! {e}")
+    print(f"❌ ERROR: OCR Engine not found at specified path.")
+    
