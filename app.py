@@ -7,11 +7,11 @@ from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-from forensics import run_ela
+# Ensure you import the new extraction function from your forensics.py
+from forensics import run_ela, extract_certificate_data
 
 app = Flask(__name__)
 CORS(app)
-
 
 # OCR setup
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -32,7 +32,6 @@ def index():
 
 @app.route('/verify', methods=['POST'])
 def verify():
-    # Matches the 'file' key appended in your index.html JS
     files = request.files.getlist('file')
 
     if not files:
@@ -48,33 +47,42 @@ def verify():
         img_path = os.path.join(UPLOAD_FOLDER, safe_name)
         file.save(img_path)
 
-        # Forensic analysis
+        # 1. Forensic analysis (Existing)
         ela_filename = run_ela(img_path)
 
-        # OCR
+        # 2. Improved OCR & ID Extraction (Now includes QR)
+        # Using the helper from forensics.py to handle image cleaning and ID regex
         try:
-            extracted_text = pytesseract.image_to_string(Image.open(img_path))
-        except:
-            extracted_text = ""
+            raw_text, detected_id = extract_certificate_data(img_path)
+            from forensics import scan_qr_code
+            qr_check = scan_qr_code(img_path)
+            source_tag = "[QR Detected]" if qr_check else "[OCR Extracted]"
+        except Exception as e:
+            print(f"Extraction Error: {e}")
+            raw_text, detected_id, source_tag = "", "Not Found", ""
         
-        # Regex for ID (e.g., ABC-1234)
-        id_pattern = r'[A-Z]{3,4}-\d{4}(?:-\d+)?'
-        found_ids = re.findall(id_pattern, extracted_text)
-
-        status = "❌ INVALID FORMAT"
+        status = "INVALID FORMAT"
         details = "No valid Certificate ID found on document"
 
-        if found_ids:
-            detected_id = found_ids[0].strip()
-            doc = db.collection('certificates').document(detected_id).get()
+        # 3. Database Validation
+        if detected_id != "Not Found":
+            # Strip extra whitespace or characters
+            clean_id = detected_id.strip()
+            doc = db.collection('certificates').document(clean_id).get()
 
             if doc.exists:
                 data = doc.to_dict()
-                status = f"✅ VERIFIED"
-                details = f"ID: {detected_id} | Owner: {data.get('Name', 'Unknown')}"
+                # Secondary check: See if owner name from DB exists in OCR text
+                db_name = data.get('Name', 'Unknown')
+                if db_name.lower() in raw_text.lower():
+                    status = "✅ VERIFIED"
+                    details = f"Authenticated for: {db_name} {source_tag}"
+                else:
+                    status = "⚠️ TAMPERED"
+                    details = f"Identity Mismatch: DB shows {db_name}, but image differs."
             else:
                 status = "⚠️ UNREGISTERED"
-                details = f"ID {detected_id} not found in database"
+                details = f"ID {clean_id} {source_tag} not found in central repository"
 
         results.append({
             "name": file.filename,
@@ -84,7 +92,6 @@ def verify():
             "forensic_img": ela_filename
         })
 
-    # Return as JSON for the index.html to process
     return jsonify(results)
 
 if __name__ == "__main__":
