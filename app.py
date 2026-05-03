@@ -1,109 +1,140 @@
 import os
+import cv2
 import re
 import pytesseract
-from PIL import Image
-from flask import Flask, render_template, request, jsonify
-from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, firestore
+from flask import Flask, render_template, request, redirect, url_for
+from forensics import run_ela, extract_certificate_data
 
-# Import extraction functions from forensics.py
-from forensics import run_ela, extract_certificate_data, scan_qr_code
-
-app = Flask(__name__)
-CORS(app)
-
-# OCR engine path setup
+# 🔥 SET TESSERACT PATH (Windows)
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-UPLOAD_FOLDER = os.path.join('static', 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Initialize Flask
+app = Flask(__name__)
+UPLOAD_FOLDER = 'static/uploads'
 
-# Firebase initialization
+# --- FIREBASE INITIALIZATION ---
 if not firebase_admin._apps:
     cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
+# ---------------- ROUTES ---------------- #
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
 @app.route('/verify', methods=['POST'])
 def verify():
-    files = request.files.getlist('file')
+    file = request.files.get('file')
+    mode = request.form.get('mode', 'database')
 
-    if not files:
-        return jsonify({"error": "No files uploaded"}), 400
+    if not file:
+        return redirect(url_for('index'))
 
-    results = []
+    path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(path)
 
-    for file in files:
-        if file.filename == '':
-            continue
+    # 🔥 OCR + extraction
+    raw_text, cert_id, quality = extract_certificate_data(path)
 
-        # Sanitize filename and save locally
-        safe_name = file.filename.replace(" ", "_")
-        img_path = os.path.join(UPLOAD_FOLDER, safe_name)
-        file.save(img_path)
+    print("MODE:", mode)
+    print("CERT ID:", cert_id)
+    print("TEXT:", raw_text[:200])
 
-        # 1. Forensic ELA analysis
-        ela_filename = run_ela(img_path)
+    # ---------------- ID NOT FOUND ---------------- #
+    if cert_id == "NOT_FOUND":
+        return render_template("results.html",
+                               mode=mode.upper(),
+                               status="INVALID",
+                               info="Certificate ID not detected",
+                               quality=quality)
 
-        # 2. Multi-Vector Extraction (Quality + QR + OCR)
-        try:
-            # extract_certificate_data now returns: text, id, and quality_status
-            raw_text, detected_id, quality = extract_certificate_data(img_path)
-            
-            # Check if QR was the source for the ID
-            qr_check = scan_qr_code(img_path)
-            source_tag = "[QR Detected]" if qr_check else "[OCR Extracted]"
-        except Exception as e:
-            print(f"Extraction Engine Error: {e}")
-            raw_text, detected_id, quality, source_tag = "", "Not Found", "Unknown", ""
-        
-        # Default status for unrecognized or poor quality formats
-        status = "INVALID FORMAT"
-        details = "Operational Failure: Unique Identifier (UID) could not be anchored."
+    # ---------------- DATABASE CHECK ---------------- #
+    doc = db.collection('certificates').document(cert_id).get()
 
-        # --- QUALITY GATE LOGIC ---
-        # If the image is blurry, we stop the check to prevent false 'Forger' flags
-        if quality == "Low/Blurry":
-            status = "⚠️ QUALITY ALERT"
-            details = "Signal interference or low resolution detected. Please re-upload a clear photograph."
-        
-        # 3. Database Validation (Only proceed if quality is 'Good' and ID exists)
-        elif detected_id != "Not Found" and detected_id != "NOT_FOUND":
-            clean_id = detected_id.strip()
-            doc = db.collection('certificates').document(clean_id).get()
+    if not doc.exists:
+        status = "FAKE"
+        info = f"ID {cert_id} is not in the registry."
+    else:
+        db_data = doc.to_dict()
 
-            if doc.exists:
-                data = doc.to_dict()
-                db_name = data.get('Name', 'Unknown')
-                
-                # Secondary validation: Cross-reference DB name against OCR text
-                if db_name.lower() in raw_text.lower():
-                    status = "✅ VERIFIED"
-                    details = f"Authenticated for: {db_name} {source_tag}"
-                else:
-                    status = "⚠️ TAMPERED"
-                    details = f"Security Mismatch: Record for {db_name} found, but image data differs."
+        # 🔥 Normalize DB values
+        official_name = str(db_data.get('Name', '')).upper().strip()
+        official_dob = str(db_data.get('DOB', '')).strip().replace('/', '-')
+
+        # 🔥 Normalize OCR text
+        ocr_clean = " ".join(raw_text.upper().split()).replace('/', '-')
+
+        print(f"DEBUG: Name [{official_name}]")
+        print(f"DEBUG: DOB [{official_dob}]")
+
+        # ---------------- NAME MATCH ---------------- #
+        name_parts = official_name.split()
+        name_match_score = sum(1 for part in name_parts if part in ocr_clean)
+        name_match = name_match_score >= max(1, len(name_parts)//2)
+
+        # ---------------- DOB EXTRACTION ---------------- #
+        dob_patterns = [
+            r'\b\d{2}[-/]\d{2}[-/]\d{4}\b',
+            r'\b\d{4}[-/]\d{2}[-/]\d{2}\b'
+        ]
+
+        ocr_dobs = []
+        for pattern in dob_patterns:
+            ocr_dobs.extend(re.findall(pattern, ocr_clean))
+
+        # ---------------- DOB LOGIC ---------------- #
+        dob_match = True  # default safe
+
+        if official_dob:
+            if len(ocr_dobs) == 0:
+                dob_match = None  # no DOB detected
             else:
-                status = "⚠️ UNREGISTERED"
-                details = f"Identifier {clean_id} {source_tag} not found in central repository."
+                normalized_ocr_dobs = [d.replace('/', '-') for d in ocr_dobs]
 
-        results.append({
-            "name": file.filename,
-            "status": status,
-            "info": details,
-            "original_img": f"uploads/{safe_name}",
-            "forensic_img": ela_filename
-        })
+                if official_dob in normalized_ocr_dobs:
+                    dob_match = True
+                else:
+                    dob_match = False  # ❌ real mismatch
 
-    return jsonify(results)
+        # ---------------- FINAL DECISION ---------------- #
+        if name_match:
+            if dob_match is False:
+                status = "TAMPERED"
+                info = f"DOB Mismatch! Registry says {official_dob}."
+            else:
+                status = "AUTHENTIC"
+                info = f"Verified record for {official_name}"
 
-if __name__ == "__main__":
-    # Running in debug mode for the hackathon development phase
-    app.run(debug=True)
-    
+                if dob_match is None:
+                    info += " | DOB not clearly detected"
+        else:
+            status = "TAMPERED"
+            info = f"Name Mismatch! Registry says {official_name}."
+
+    # ---------------- QUALITY WARNING ---------------- #
+    if quality == "Low/Blurry":
+        info += " | Warning: Low image quality detected"
+
+    # ---------------- FORENSIC MODE ---------------- #
+    ela_path = None
+    if mode == "forensic":
+        ela_path = run_ela(path)
+
+    return render_template("results.html",
+                           mode=mode.upper(),
+                           status=status,
+                           info=info,
+                           quality=quality,
+                           cert_id=cert_id,
+                           original_img=f"uploads/{file.filename}",
+                           forensic_img=ela_path)
+
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)

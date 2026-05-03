@@ -43,7 +43,6 @@ def calculate_blur(image_path):
     img = cv2.imread(image_path)
     if img is None: return 0
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Variance of Laplacian measures the 'sharpness' of edges
     return cv2.Laplacian(gray, cv2.CV_64F).var()
 
 # --- OCR PREPROCESSING ---
@@ -53,7 +52,6 @@ def preprocess_for_ocr(image_path):
     if img is None: return None
     
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Bilateral Filter removes noise while keeping edges (better than Gaussian for OCR)
     denoised = cv2.bilateralFilter(gray, 9, 75, 75)
     
     processed_img = cv2.adaptiveThreshold(
@@ -81,7 +79,7 @@ def scan_qr_code(image_path):
 def extract_certificate_data(image_path):
     """Main function to get results with quality checking"""
     
-    # 1. Check Image Quality first
+    # 1. Check Image Quality
     blur_score = calculate_blur(image_path)
     quality_status = "Good" if blur_score > 100 else "Low/Blurry"
     
@@ -90,18 +88,24 @@ def extract_certificate_data(image_path):
     processed_img = preprocess_for_ocr(image_path)
     
     if processed_img is None:
-        return "Error processing image", "N/A", "Critically Low"
+        return "Error processing image", "NOT_FOUND", "Critically Low"
     
-    raw_text = pytesseract.image_to_string(processed_img)
+    # Use PSM 11 to find text regardless of layout (helps broad certificates)
+    raw_text = pytesseract.image_to_string(processed_img, config='--psm 11').upper()
     
-    # 3. ID Priority
+    # 3. ID Priority Logic (The "Universal" Fix)
     if qr_id:
         cert_id = qr_id
     else:
-        # Improved Regex to be more specific to IDs
-        id_pattern = r'\b[A-Z0-9-]{6,}\b' 
+        # Broad Alphanumeric Search: 8-20 chars long
+        id_pattern = r'\b[A-Z0-9-]{8,20}\b' 
         found_ids = re.findall(id_pattern, raw_text)
-        cert_id = found_ids[0] if found_ids else "NOT_FOUND"
+        
+        # Filter out common header words that OCR might misidentify as an ID
+        blacklist = ["CERTIFICATE", "COMPLETION", "PRESENTED", "SUCCESSFULLY", "UNIVERSITY"]
+        potential_ids = [uid for uid in found_ids if uid not in blacklist]
+        
+        # Pick the first potential ID that isn't blacklisted
+        cert_id = potential_ids[0] if potential_ids else "NOT_FOUND"
     
-    # Returns: Raw Text, ID, and Quality Status for app.py to use
     return raw_text, cert_id, quality_status

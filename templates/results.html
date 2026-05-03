@@ -1,202 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Alchemist Forensic Report</title>
-
+    <meta charset="UTF-8">
+    <title>Alchemist Report</title>
     <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: #f5f7fb;
-            color: #1f2937;
-        }
-
-        /* subtle grid background (removes emptiness) */
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
-            background-size: 22px 22px;
-            opacity: 0.6;
-            z-index: -1;
-        }
-
-        /* TOP HEADER */
-        .header {
-            text-align: center;
-            padding: 30px 20px 10px;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 26px;
-            letter-spacing: 0.3px;
-        }
-
-        /* STATUS */
-        .status {
-            display: inline-block;
-            margin-top: 12px;
-            padding: 8px 16px;
-            border-radius: 999px;
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        .verified {
-            background: #ecfdf5;
-            color: #16a34a;
-            border: 1px solid #86efac;
-        }
-
-        .fake {
-            background: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fca5a5;
-        }
-
-        /* MAIN CONTAINER */
-        .container {
-            max-width: 1100px;
-            margin: auto;
-            padding: 20px;
-        }
-
-        /* REPORT CARD */
-        .report {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-            overflow: hidden;
-        }
-
-        /* ANALYSIS STRIP */
-        .strip {
-            background: linear-gradient(90deg, #6366f1, #8b5cf6);
-            color: white;
-            padding: 12px 18px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        /* GRID */
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            padding: 18px;
-        }
-
-        /* IMAGE CARDS */
-        .card {
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #fafafa;
-        }
-
-        .card h3 {
-            margin: 0;
-            padding: 12px;
-            font-size: 13px;
-            background: #f3f4f6;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .card img {
-            width: 100%;
-            display: block;
-        }
-
-        /* INFO SECTION */
-        .info {
-            padding: 0 18px 18px;
-        }
-
-        .note {
-            background: #f8fafc;
-            border-left: 4px solid #6366f1;
-            padding: 12px 14px;
-            border-radius: 8px;
-            font-size: 13px;
-            color: #374151;
-        }
-
-        /* FOOTER */
-        .footer {
-            text-align: center;
-            margin: 20px 0 40px;
-        }
-
-        .footer a {
-            color: #4f46e5;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 800px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
-        }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f5f7fb; padding: 40px; }
+        .report-card { max-width: 900px; margin: auto; background: white; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }
+        .banner { background: #1e1b4b; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .stat-box { background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; }
+        .img-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .img-preview img { width: 100%; border-radius: 8px; border: 1px solid #ddd; }
     </style>
 </head>
-
 <body>
 
-    <!-- HEADER -->
-    <div class="header">
-
-        <h1>Forensic Certificate Analysis Report</h1>
-
-        <div class="status {{ 'verified' if 'VERIFIED' in status else 'fake' }}">
-            {{ status }}
-        </div>
-
+<div class="report-card">
+    <div class="banner">
+        <h1>{{ mode }}</h1>
+        <p>Status: {{ status }}</p>
     </div>
 
-    <!-- REPORT -->
-    <div class="container">
-
-        <div class="report">
-
-            <div class="strip">
-                Automated Analysis Engine • Error Level Forensics • Authenticity Check
-            </div>
-
-            <div class="grid">
-
-                <div class="card">
-                    <h3>Original Certificate</h3>
-                    <img src="{{ url_for('static', filename=original_img) }}">
-                </div>
-
-                <div class="card">
-                    <h3>Error Level Analysis (ELA)</h3>
-                    <img src="{{ url_for('static', filename=forensic_img) }}">
-                </div>
-
-            </div>
-
-            <div class="info">
-                <div class="note">
-                    Bright or inconsistent regions in the ELA map may indicate digital manipulation, compression differences, or tampering attempts.
-                </div>
-            </div>
-
+    <div class="content">
+        <div class="stat-grid">
+            {% if score is defined %}
+            <div class="stat-box"><strong>Tamper Score</strong><br>{{ score }}%</div>
+            <div class="stat-box"><strong>Image Quality</strong><br>{{ quality }}</div>
+            <div class="stat-box"><strong>Integrity</strong><br>{{ 100 - score }}%</div>
+            {% endif %}
         </div>
 
-        <div class="footer">
-            <a href="{{ url_for('index') }}">← Analyze another certificate</a>
+        {% if forensic_img %}
+        <div class="img-preview">
+            <div><small>Original</small><br><img src="{{ url_for('static', filename=original_img) }}"></div>
+            <div><small>Forensic Scan</small><br><img src="{{ url_for('static', filename=forensic_img) }}"></div>
         </div>
+        {% endif %}
 
+        {% if info %}
+        <div style="background:#f1f5f9; padding:20px; border-radius:10px; margin-top:20px;">
+            <strong>Analysis Details:</strong><br>{{ info }}
+        </div>
+        {% endif %}
+
+        <div style="text-align:center; margin-top:30px;">
+            <button onclick="window.location.href='/'" style="background:#6d28d9; color:white; border:none; padding:10px 30px; border-radius:8px; cursor:pointer;">New Scan</button>
+        </div>
+        <div class="stat-box"><strong>Detected ID</strong><br>{{ info }}</div>
     </div>
+</div>
 
 </body>
 </html>
