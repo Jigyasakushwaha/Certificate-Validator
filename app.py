@@ -1,5 +1,4 @@
 import os
-import cv2
 import re
 import pytesseract
 import firebase_admin
@@ -7,134 +6,201 @@ from firebase_admin import credentials, firestore
 from flask import Flask, render_template, request, redirect, url_for
 from forensics import run_ela, extract_certificate_data
 
-# 🔥 SET TESSERACT PATH (Windows)
+# Tesseract path (Windows)
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-# Initialize Flask
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static/uploads'
 
-# --- FIREBASE INITIALIZATION ---
+# --- FIREBASE INIT ---
 if not firebase_admin._apps:
     cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
-# ---------------- ROUTES ---------------- #
 
+# --- HOME ROUTE ---
 @app.route('/')
 def index():
     return render_template('index.html')
 
 
+# --- VERIFY ROUTE ---
 @app.route('/verify', methods=['POST'])
 def verify():
+
     file = request.files.get('file')
-    mode = request.form.get('mode', 'database')
+    mode = request.form.get('mode', 'verify')
 
     if not file:
         return redirect(url_for('index'))
 
+    # Save file
     path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(path)
 
-    # 🔥 OCR + extraction
-    raw_text, cert_id, quality = extract_certificate_data(path)
+    # OCR + extraction
+    
+    result = extract_certificate_data(path)
+
+    if result:
+     raw_text, cert_id, extracted_name, quality = result
+    else:
+     raw_text, cert_id, extracted_name, quality = "", "NOT_FOUND", "NOT FOUND", "ERROR"
 
     print("MODE:", mode)
     print("CERT ID:", cert_id)
-    print("TEXT:", raw_text[:200])
+    print("NAME:", extracted_name)
 
-    # ---------------- ID NOT FOUND ---------------- #
+    # =========================
+    # 🚨 QUALITY CHECK FIRST
+    # =========================
+    if quality == "Low/Blurry":
+        return render_template("results.html",
+                               mode="QUALITY CHECK",
+                               status="INVALID",
+                               info="Please upload a clearer image for accurate analysis.",
+                               quality=quality,
+                               cert_id="N/A",
+                               extracted_name="N/A",
+                               score=0,
+                               report=["Image quality too low for reliable OCR."])
+
+    # =========================
+    # 🔹 MODE: QUALITY ONLY
+    # =========================
+    if mode == "quality":
+
+        ela_path = run_ela(path)
+
+        return render_template("results.html",
+                               mode="QUALITY ANALYSIS",
+                               status="ANALYZED",
+                               info="Image analyzed for quality and tampering.",
+                               quality=quality,
+                               cert_id="N/A",
+                               extracted_name="N/A",
+                               score=20,
+                               report=[
+                                   "Image processed successfully.",
+                                   "ELA forensic scan applied.",
+                                   "No strong tampering indicators detected."
+                               ],
+                               original_img=f"uploads/{file.filename}",
+                               forensic_img = ela_path if ela_path else None)
+    
+    # =========================
+    # 🔹 VALIDATION MODE
+    # =========================
+
     if cert_id == "NOT_FOUND":
         return render_template("results.html",
-                               mode=mode.upper(),
+                               mode="VERIFICATION",
                                status="INVALID",
                                info="Certificate ID not detected",
-                               quality=quality)
+                               quality=quality,
+                               cert_id="NOT FOUND",
+                               extracted_name=extracted_name,
+                               score=20,
+                               report=["OCR failed to detect certificate ID."])
 
-    # ---------------- DATABASE CHECK ---------------- #
+    # --- DATABASE CHECK ---
     doc = db.collection('certificates').document(cert_id).get()
 
     if not doc.exists:
-        status = "FAKE"
-        info = f"ID {cert_id} is not in the registry."
+        status = "NOT REGISTERED"
+        info = f"ID {cert_id} not found in registry."
+
     else:
         db_data = doc.to_dict()
 
-        # 🔥 Normalize DB values
         official_name = str(db_data.get('Name', '')).upper().strip()
-        official_dob = str(db_data.get('DOB', '')).strip().replace('/', '-')
+        official_dob = str(db_data.get('DOB', '')).strip().replace("/", "-")
 
-        # 🔥 Normalize OCR text
-        ocr_clean = " ".join(raw_text.upper().split()).replace('/', '-')
+        # Normalize OCR
+        ocr_clean = " ".join(raw_text.upper().split()).replace("/", "-")
 
-        print(f"DEBUG: Name [{official_name}]")
-        print(f"DEBUG: DOB [{official_dob}]")
-
-        # ---------------- NAME MATCH ---------------- #
+        # --- NAME MATCH ---
         name_parts = official_name.split()
-        name_match_score = sum(1 for part in name_parts if part in ocr_clean)
-        name_match = name_match_score >= max(1, len(name_parts)//2)
+        name_match = sum(1 for p in name_parts if p in ocr_clean) >= max(1, len(name_parts)//2)
 
-        # ---------------- DOB EXTRACTION ---------------- #
-        dob_patterns = [
-            r'\b\d{2}[-/]\d{2}[-/]\d{4}\b',
-            r'\b\d{4}[-/]\d{2}[-/]\d{2}\b'
-        ]
+        # --- DOB CHECK ---
+        dob_pattern = r'\b\d{2}-\d{2}-\d{4}\b'
+        found_dobs = re.findall(dob_pattern, ocr_clean)
 
-        ocr_dobs = []
-        for pattern in dob_patterns:
-            ocr_dobs.extend(re.findall(pattern, ocr_clean))
+        dob_present_in_cert = len(found_dobs) > 0
+        dob_match = official_dob in found_dobs
 
-        # ---------------- DOB LOGIC ---------------- #
-        dob_match = True  # default safe
+        # --- FINAL DECISION ---
+        if not name_match:
+            status = "MISMATCH"
+            info = f"Name mismatch with registry ({official_name})"
 
-        if official_dob:
-            if len(ocr_dobs) == 0:
-                dob_match = None  # no DOB detected
-            else:
-                normalized_ocr_dobs = [d.replace('/', '-') for d in ocr_dobs]
-
-                if official_dob in normalized_ocr_dobs:
-                    dob_match = True
+        else:
+            if dob_present_in_cert:
+                if dob_match:
+                    status = "AUTHENTIC"
+                    info = f"Verified: {official_name} (DOB matched)"
                 else:
-                    dob_match = False  # ❌ real mismatch
-
-        # ---------------- FINAL DECISION ---------------- #
-        if name_match:
-            if dob_match is False:
-                status = "TAMPERED"
-                info = f"DOB Mismatch! Registry says {official_dob}."
+                    status = "TAMPERED"
+                    info = f"DOB mismatch! Expected {official_dob}"
             else:
                 status = "AUTHENTIC"
-                info = f"Verified record for {official_name}"
+                info = f"Verified: {official_name} (No DOB found)"
 
-                if dob_match is None:
-                    info += " | DOB not clearly detected"
-        else:
-            status = "TAMPERED"
-            info = f"Name Mismatch! Registry says {official_name}."
+    # =========================
+    # 🔥 TAMPER ANALYSIS
+    # =========================
 
-    # ---------------- QUALITY WARNING ---------------- #
-    if quality == "Low/Blurry":
-        info += " | Warning: Low image quality detected"
+    tamper_score = 0
+    report = []
 
-    # ---------------- FORENSIC MODE ---------------- #
-    ela_path = None
-    if mode == "forensic":
-        ela_path = run_ela(path)
+    if status == "NOT REGISTERED":
+        tamper_score += 50
+        report.append("Certificate ID not found in database.")
+
+    if status == "MISMATCH":
+        tamper_score += 40
+        report.append("Name mismatch detected.")
+
+    if status == "TAMPERED":
+        tamper_score += 40
+        report.append("DOB mismatch detected.")
+        # Only block if EXTREMELY bad
+    if quality == "Low/Blurry" and cert_id == "NOT_FOUND" and extracted_name == "NOT FOUND":
+      status = "INVALID"
+    report.append("Image too blurry for reliable detection.")
+
+    tamper_score = min(tamper_score, 100)
+
+    if tamper_score > 60:
+        report.append("High probability of tampering.")
+    else:
+        report.append("No strong tampering evidence.")
+
+    # Always run forensic scan
+    ela_path = run_ela(path)
+    report.append("Forensic scan applied (ELA).")
+    print("ELA PATH:", ela_path)
+
+    # =========================
+    # FINAL OUTPUT
+    # =========================
 
     return render_template("results.html",
-                           mode=mode.upper(),
+                           mode="VERIFICATION",
                            status=status,
                            info=info,
                            quality=quality,
                            cert_id=cert_id,
+                           extracted_name=extracted_name,
+                           score=tamper_score,
+                           report=report,
                            original_img=f"uploads/{file.filename}",
-                           forensic_img=ela_path)
+                           forensic_img = ela_path if ela_path else None)
 
 
+# --- RUN SERVER ---
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

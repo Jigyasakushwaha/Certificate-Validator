@@ -1,53 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Alchemist Report</title>
-    <style>
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f5f7fb; padding: 40px; }
-        .report-card { max-width: 900px; margin: auto; background: white; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); overflow: hidden; }
-        .banner { background: #1e1b4b; color: white; padding: 20px; text-align: center; }
-        .content { padding: 30px; }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-        .stat-box { background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; }
-        .img-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .img-preview img { width: 100%; border-radius: 8px; border: 1px solid #ddd; }
-    </style>
+<meta charset="UTF-8">
+<title>Alchemist Report</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #f5f7fb;
+    padding: 40px;
+}
+
+.report-card {
+    max-width: 900px;
+    margin: auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.banner {
+    background: #1e1b4b;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+.status {
+    font-weight: bold;
+    padding: 6px 14px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-top: 10px;
+}
+
+/* UPDATED STATUS COLORS */
+.status.AUTHENTIC { background: #dcfce7; color: #166534; }
+.status.NOT\ REGISTERED { background: #fee2e2; color: #991b1b; }
+.status.MISMATCH { background: #fef3c7; color: #92400e; }
+.status.ANALYZED { background: #e0f2fe; color: #075985; }
+.status.INVALID { background: #fee2e2; color: #991b1b; }
+
+.content {
+    padding: 30px;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-box {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+    font-weight: 500;
+}
+
+.img-preview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.img-preview img {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+}
+
+.section {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.analysis {
+    background: #f1f5f9;
+}
+
+.report {
+    background: #fef2f2;
+}
+
+/* 🔥 QUALITY WARNING */
+.warning {
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fed7aa;
+}
+
+button {
+    margin-top: 30px;
+    background: #6d28d9;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+</style>
 </head>
+
 <body>
 
 <div class="report-card">
+
+    <!-- HEADER -->
     <div class="banner">
         <h1>{{ mode }}</h1>
-        <p>Status: {{ status }}</p>
+        <div class="status {{ status }}">{{ status }}</div>
     </div>
 
     <div class="content">
+
+        <!-- STATS -->
         <div class="stat-grid">
             {% if score is defined %}
-            <div class="stat-box"><strong>Tamper Score</strong><br>{{ score }}%</div>
-            <div class="stat-box"><strong>Image Quality</strong><br>{{ quality }}</div>
-            <div class="stat-box"><strong>Integrity</strong><br>{{ 100 - score }}%</div>
+            <div class="stat-box">
+                Forgery Risk<br><strong>{{ score }}%</strong>
+            </div>
+
+            <div class="stat-box">
+                Image Quality<br><strong>{{ quality }}</strong>
+            </div>
+
+            <div class="stat-box">
+                Integrity<br><strong>{{ 100 - score }}%</strong>
+            </div>
             {% endif %}
         </div>
 
+        <!-- 🔥 EXTRACTED DATA -->
+        <div class="stat-grid">
+            <div class="stat-box">
+                Detected ID<br><strong>{{ cert_id }}</strong>
+            </div>
+
+            {% if extracted_name %}
+            <div class="stat-box">
+                Extracted Name<br><strong>{{ extracted_name }}</strong>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 🔥 QUALITY WARNING -->
+        {% if quality == "Low/Blurry" %}
+        <div class="section warning">
+            ⚠ Low quality image detected. Results may be inaccurate.
+        </div>
+        {% endif %}
+
+        <!-- IMAGES -->
         {% if forensic_img %}
         <div class="img-preview">
-            <div><small>Original</small><br><img src="{{ url_for('static', filename=original_img) }}"></div>
-            <div><small>Forensic Scan</small><br><img src="{{ url_for('static', filename=forensic_img) }}"></div>
+            <div>
+                <small>Original</small><br>
+                <img src="{{ url_for('static', filename=original_img) }}">
+            </div>
+            <div>
+                <small>Forensic Scan</small><br>
+                <img src="{{ url_for('static', filename=forensic_img) }}">
+            </div>
         </div>
         {% endif %}
 
+        <!-- ANALYSIS -->
         {% if info %}
-        <div style="background:#f1f5f9; padding:20px; border-radius:10px; margin-top:20px;">
-            <strong>Analysis Details:</strong><br>{{ info }}
+        <div class="section analysis">
+            <strong>Analysis Details:</strong><br>
+            {{ info }}
         </div>
         {% endif %}
 
-        <div style="text-align:center; margin-top:30px;">
-            <button onclick="window.location.href='/'" style="background:#6d28d9; color:white; border:none; padding:10px 30px; border-radius:8px; cursor:pointer;">New Scan</button>
+        <!-- FORENSIC REPORT -->
+        {% if report %}
+        <div class="section report">
+            <strong>Forensic Report:</strong>
+            <ul>
+                {% for r in report %}
+                <li>{{ r }}</li>
+                {% endfor %}
+            </ul>
         </div>
-        <div class="stat-box"><strong>Detected ID</strong><br>{{ info }}</div>
+        {% endif %}
+
+        <!-- BUTTON -->
+        <div style="text-align:center;">
+            <button onclick="window.location.href='/'">New Scan</button>
+        </div>
+
     </div>
 </div>
 

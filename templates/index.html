@@ -1,50 +1,129 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Alchemist - Multi-Layer Verification</title>
+    <title>AI Alchemist - Certificate Validator</title>
+
     <style>
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f3f0ff; color: #1f2937; }
-        .container { max-width: 800px; margin: 40px auto; background: white; border-radius: 16px; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .mode-selector { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .mode-card { border: 2px solid #e5e7eb; padding: 15px; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.3s; }
-        .mode-card.active { border-color: #6d28d9; background: #f5f3ff; }
-        .mode-card input { display: none; }
-        .upload-area { border: 2px dashed #c4b5fd; padding: 40px; text-align: center; border-radius: 12px; cursor: pointer; background: #f9f7ff; display: block; }
-        button { margin-top: 25px; width: 100%; padding: 15px; border: none; border-radius: 10px; background: #6d28d9; color: white; font-weight: 700; cursor: pointer; }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f3f0ff;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #1e1b4b;
+        }
+
+        .mode-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .mode-card {
+            border: 2px solid #e5e7eb;
+            padding: 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: 0.3s;
+        }
+
+        .mode-card.active {
+            border-color: #6d28d9;
+            background: #f5f3ff;
+        }
+
+        .mode-card input {
+            display: none;
+        }
+
+        .upload-area {
+            border: 2px dashed #c4b5fd;
+            padding: 40px;
+            text-align: center;
+            border-radius: 12px;
+            cursor: pointer;
+            background: #f9f7ff;
+        }
+
+        button {
+            margin-top: 25px;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: #6d28d9;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .note {
+            font-size: 13px;
+            text-align: center;
+            color: #6b7280;
+            margin-top: 10px;
+        }
     </style>
 </head>
+
 <body>
 
 <div class="container">
-    <h2 style="text-align:center; color:#1e1b4b;">Certificate Verification Portal</h2>
+
+    <h2>Certificate Verification Portal</h2>
+
     <form id="verifyForm">
+
+        <!-- MODE SELECTOR -->
         <div class="mode-selector">
+
             <label class="mode-card active">
-                <input type="radio" name="mode" value="forensic" checked>
-                <strong>🔍 Forensic</strong><br><small>Tamper Analysis</small>
+                <input type="radio" name="mode" value="verify" checked>
+                <strong>✔ Verification Mode</strong><br>
+                <small>Check authenticity using database</small>
             </label>
+
             <label class="mode-card">
-                <input type="radio" name="mode" value="qr">
-                <strong>📱 QR Code</strong><br><small>Data Scan</small>
+                <input type="radio" name="mode" value="quality">
+                <strong>🔍 Quality Check</strong><br>
+                <small>Analyze image & tampering only</small>
             </label>
-            <label class="mode-card">
-                <input type="radio" name="mode" value="database">
-                <strong>🗄️ Database</strong><br><small>Registry Check</small>
-            </label>
+
         </div>
 
+        <!-- UPLOAD -->
         <label for="fileInput" class="upload-area">
-            <strong>Drop Certificate Image Here</strong>
+            <strong>Click to Upload Certificate</strong>
+            <div class="note">Upload a clear image for best results</div>
         </label>
+
         <input type="file" id="fileInput" name="file" style="display:none" required>
+
         <div id="fileName" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
 
-        <button type="submit">Run Verification</button>
+        <button type="submit">Run Analysis</button>
+
     </form>
+
 </div>
 
 <script>
-    // Visual toggle for the mode cards
+
+    // Mode selection highlight
     document.querySelectorAll('.mode-card').forEach(card => {
         card.addEventListener('click', () => {
             document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
@@ -52,17 +131,29 @@
         });
     });
 
+    // Show file name
     document.getElementById('fileInput').addEventListener('change', (e) => {
         document.getElementById('fileName').innerText = e.target.files[0].name;
     });
 
+    // Submit form
     document.getElementById('verifyForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+
         const formData = new FormData(e.target);
-        const res = await fetch('/verify', { method: 'POST', body: formData });
+
+        const res = await fetch('/verify', {
+            method: 'POST',
+            body: formData
+        });
+
         const html = await res.text();
-        document.open(); document.write(html); document.close();
-});
+        document.open();
+        document.write(html);
+        document.close();
+    });
+
 </script>
+
 </body>
 </html>

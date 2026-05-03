@@ -3,9 +3,38 @@ import numpy as np
 import os
 import pytesseract
 import re
-from pyzbar.pyzbar import decode
 
-# --- YOUR EXISTING ELA CODE (UNTOUCHED) ---
+
+# ============================
+# 🔍 IMAGE QUALITY CHECK
+# ============================
+
+def calculate_blur(image_path):
+    img = cv2.imread(image_path)
+    if img is None:
+        return 0
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    return cv2.Laplacian(gray, cv2.CV_64F).var()
+
+
+# ============================
+# 🔍 OCR PREPROCESSING
+# ============================
+
+def preprocess_for_ocr(image_path):
+    img = cv2.imread(image_path)
+    if img is None:
+        return None
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+
+    return thresh
+
+
+# ============================
+# 🔍 ELA (OPTIONAL)
+# ============================
 def run_ela(image_path, quality=90):
     try:
         original = cv2.imread(image_path)
@@ -13,99 +42,153 @@ def run_ela(image_path, quality=90):
             return None
 
         temp_path = "temp_ela.jpg"
+
+        # Save compressed version
         cv2.imwrite(temp_path, original, [cv2.IMWRITE_JPEG_QUALITY, quality])
         compressed = cv2.imread(temp_path)
-        
+
+        # Compute difference
         diff = cv2.absdiff(original, compressed)
-        enhanced = diff * 15
 
-        static_dir = os.path.join('static', 'uploads')
-        os.makedirs(static_dir, exist_ok=True)
+        # 🔥 BOOST VISIBILITY
+        enhanced = cv2.convertScaleAbs(diff, alpha=25, beta=0)
 
-        result_filename = "ela_" + os.path.basename(image_path)
-        output_path = os.path.join(static_dir, result_filename)
+        # Heatmap
+        gray = cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)
+        heatmap = cv2.applyColorMap(gray, cv2.COLORMAP_JET)
 
-        cv2.imwrite(output_path, enhanced)
+        # ✅ FIXED PATH HANDLING
+        filename = "ela_" + os.path.basename(image_path)
+        output_path = os.path.join("static/uploads", filename)
 
+        cv2.imwrite(output_path, heatmap)
+
+        # Cleanup
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-        return f"uploads/{result_filename}"
+        # ✅ RETURN RELATIVE PATH (IMPORTANT)
+        return f"uploads/{filename}"
 
     except Exception as e:
-        print(f"ELA ERROR: {e}")
+        print("ELA ERROR:", e)
         return None
 
-# --- NEW: BLUR DETECTION (To prevent False Positives) ---
-
-def calculate_blur(image_path):
-    """Returns a score: higher is sharper, lower is blurrier"""
-    img = cv2.imread(image_path)
-    if img is None: return 0
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    return cv2.Laplacian(gray, cv2.CV_64F).var()
-
-# --- OCR PREPROCESSING ---
-
-def preprocess_for_ocr(image_path):
-    img = cv2.imread(image_path)
-    if img is None: return None
-    
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    denoised = cv2.bilateralFilter(gray, 9, 75, 75)
-    
-    processed_img = cv2.adaptiveThreshold(
-        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-        cv2.THRESH_BINARY, 11, 2
-    )
-    return processed_img
-
-# --- QR CODE FEATURE ---
-
-def scan_qr_code(image_path):
-    try:
-        img = cv2.imread(image_path)
-        if img is None: return None
-        decoded_objects = decode(img)
-        if decoded_objects:
-            return decoded_objects[0].data.decode('utf-8')
-        return None
-    except Exception as e:
-        print(f"QR Error: {e}")
-        return None
-
-# --- MAIN EXTRACTION LOGIC ---
-
+# ============================
+# 🔍 MAIN FUNCTION
+# ============================
 def extract_certificate_data(image_path):
-    """Main function to get results with quality checking"""
-    
-    # 1. Check Image Quality
-    blur_score = calculate_blur(image_path)
-    quality_status = "Good" if blur_score > 100 else "Low/Blurry"
-    
-    # 2. QR/OCR Extraction
-    qr_id = scan_qr_code(image_path)
-    processed_img = preprocess_for_ocr(image_path)
-    
-    if processed_img is None:
-        return "Error processing image", "NOT_FOUND", "Critically Low"
-    
-    # Use PSM 11 to find text regardless of layout (helps broad certificates)
-    raw_text = pytesseract.image_to_string(processed_img, config='--psm 11').upper()
-    
-    # 3. ID Priority Logic (The "Universal" Fix)
-    if qr_id:
-        cert_id = qr_id
-    else:
-        # Broad Alphanumeric Search: 8-20 chars long
-        id_pattern = r'\b[A-Z0-9-]{8,20}\b' 
-        found_ids = re.findall(id_pattern, raw_text)
-        
-        # Filter out common header words that OCR might misidentify as an ID
-        blacklist = ["CERTIFICATE", "COMPLETION", "PRESENTED", "SUCCESSFULLY", "UNIVERSITY"]
-        potential_ids = [uid for uid in found_ids if uid not in blacklist]
-        
-        # Pick the first potential ID that isn't blacklisted
-        cert_id = potential_ids[0] if potential_ids else "NOT_FOUND"
-    
-    return raw_text, cert_id, quality_status
+
+    try:
+        blur_score = calculate_blur(image_path)
+        quality_status = "Good" if blur_score > 80 else "Low/Blurry"
+
+        img = cv2.imread(image_path)
+        if img is None:
+            return "", "NOT_FOUND", "NOT FOUND", "LOW"
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # 🔥 MULTI PREPROCESSING
+        thresh = cv2.adaptiveThreshold(
+            gray, 255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY, 11, 2
+        )
+
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        # 🔥 MULTI OCR (VERY IMPORTANT)
+        text1 = pytesseract.image_to_string(thresh, config='--psm 6')
+        text2 = pytesseract.image_to_string(gray, config='--psm 11')
+
+        raw_text = (text1 + "\n" + text2).upper()
+
+        # Preserve structure
+        lines = [l.strip() for l in raw_text.split("\n") if len(l.strip()) > 2]
+
+        # Clean version (for regex only)
+        clean_text = re.sub(r'[^A-Z0-9\s\-\/]', ' ', raw_text)
+        clean_text = re.sub(r'\s+', ' ', clean_text)
+
+        # ============================
+        # 🔥 ID DETECTION (FINAL)
+        # ============================
+
+        cert_id = "NOT_FOUND"
+
+        id_patterns = [
+            r'\bCERT[-\s]*\d{2,}[-\d]*\b',
+            r'\b[A-Z]{2,}[-]?\d{3,}\b',
+            r'\b\d{4}[-/]\d+\b',
+            r'ROLL\s*(?:NO|NUMBER)?[:\-\s]*([A-Z0-9\-\/]{4,})',
+            r'REGISTRATION\s*(?:NO|ID)?[:\-\s]*([A-Z0-9\-\/]{4,})'
+        ]
+
+        for pattern in id_patterns:
+            match = re.search(pattern, clean_text)
+            if match:
+                cert_id = match.group(0)
+                break
+
+        # ❌ remove junk like IFICATION
+        if cert_id.endswith("IFICATION"):
+            cert_id = "NOT_FOUND"
+
+        # ============================
+        # 🔥 NAME DETECTION (FINAL)
+        # ============================
+
+        extracted_name = "NOT FOUND"
+        name_candidates = []
+
+        ignore_words = [
+            "CERTIFICATE", "CERTIFICATION", "ONLINE",
+            "ACADEMY", "COURSE", "DATA", "PYTHON",
+            "SUMMARY", "PERFORMANCE", "SCORE",
+            "OF", "THE", "IN", "NPTEL"
+        ]
+
+        for i, line in enumerate(lines):
+            words = line.split()
+
+            if 2 <= len(words) <= 3:
+
+                if not all(w.isalpha() for w in words):
+                    continue
+
+                if any(w in ignore_words for w in words):
+                    continue
+
+                if any(char.isdigit() for char in line):
+                    continue
+
+                if len(line) < 8 or len(line) > 25:
+                    continue
+
+                # center bias
+                score = abs(i - len(lines)//2)
+
+                name_candidates.append((line, score))
+
+        if name_candidates:
+            extracted_name = sorted(name_candidates, key=lambda x: x[1])[0][0]
+
+        if len(extracted_name) < 5:
+            extracted_name = "NOT FOUND"
+
+        # ============================
+        # DEBUG
+        # ============================
+
+        print("\n===== OCR DEBUG =====")
+        print(clean_text[:300])
+        print("ID:", cert_id)
+        print("NAME:", extracted_name)
+        print("====================\n")
+
+        return clean_text, cert_id, extracted_name, quality_status
+
+    except Exception as e:
+        print("ERROR:", e)
+        return "", "NOT_FOUND", "NOT FOUND", "ERROR"
