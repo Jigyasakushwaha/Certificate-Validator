@@ -26,6 +26,7 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 
+
 # --- HOME ROUTE ---
 @app.route('/')
 def index():
@@ -50,6 +51,7 @@ def verify():
     path = os.path.join(UPLOAD_FOLDER, filename)
 
     file.save(path)
+    original_img = f"uploads/{filename}"
 
     # OCR + extraction
     
@@ -90,7 +92,7 @@ def verify():
     
     if quality == "Low/Blurry":
         return render_template("results.html",
-                               mode="QUALITY CHECK",
+                               mode="quality",
                                status="INVALID",
                                info="Please upload a clearer image for accurate analysis.",
                                quality=quality,
@@ -100,6 +102,7 @@ def verify():
                                confidence=confidence,
                                boxed_img=boxed_img,
                                decision_points=decision_points,
+                               original_img=original_img, 
                                report=["Image quality too low for reliable OCR."])
 
     # =========================
@@ -123,13 +126,14 @@ def verify():
         report = ["Image is clear.", "No major blur detected."]
 
      return render_template("results.html",
-                           mode="QUALITY ANALYSIS",
+                           mode="quality",
                            status=status,
                            info=info,
                            quality=quality,
                            score=score,
                            report=report,
-                           original_img=f"uploads/{file.filename}",
+                           confidence=confidence,
+                           original_img=original_img,
                            forensic_img=ela_path if ela_path else None)
 
 
@@ -150,6 +154,7 @@ def verify():
                                confidence=confidence,
                                boxed_img=boxed_img,
                                decision_points=decision_points,
+                               original_img=original_img, 
                                report=["OCR failed to detect certificate ID."])
 
     # --- DATABASE CHECK ---
@@ -175,7 +180,7 @@ def verify():
         # --- FINAL DECISION ---
         if not name_match:
            status = "MISMATCH"
-           info = f"Name mismatch with registry ({official_name})"
+           info = f"⚠ Identity mismatch detected (Registry: {official_name})"
         else:
            status = "AUTHENTIC"
            info = f"Verified: {official_name}"
@@ -278,7 +283,7 @@ def verify():
                            extracted_name=extracted_name,
                            score=tamper_score,
                            report=report,
-                           original_img=f"uploads/{filename}",
+                           original_img=original_img,
                            confidence=confidence, 
                            boxed_img=boxed_img,
                            decision_points=decision_points,
@@ -332,6 +337,7 @@ def download_report():
 
         ("BACKGROUND", (0, 1), (-1, -1), colors.whitesmoke),
     ]))
+
 
     content.append(table)
     content.append(Spacer(1, 20))
