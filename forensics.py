@@ -81,7 +81,13 @@ def extract_certificate_data(image_path):
 
     try:
         blur_score = calculate_blur(image_path)
-        quality_status = "Good" if blur_score > 80 else "Low/Blurry"
+        if blur_score > 200:
+          quality_status = "Good"
+        elif blur_score > 100:
+          quality_status = "Medium"
+        else:
+         quality_status = "Low/Blurry"
+         print("BLUR SCORE:", blur_score)
 
         img = cv2.imread(image_path)
         if img is None:
@@ -187,8 +193,13 @@ def extract_certificate_data(image_path):
             if name_candidates:
                 extracted_name = sorted(name_candidates, key=lambda x: x[1])[0][0]
 
-        if len(extracted_name) < 5:
+        if not extracted_name or len(extracted_name.strip()) < 3: 
             extracted_name = "NOT FOUND"
+        print("FINAL NAME:", repr(extracted_name))
+        # 🚨 OCR RELIABILITY CHECK (only blur here)
+        # 🚨 OCR RELIABILITY CHECK (only block ID, not name)
+        if quality_status == "Low/Blurry":
+         cert_id = "NOT_FOUND"
 
         # ============================
         # DEBUG
@@ -200,8 +211,45 @@ def extract_certificate_data(image_path):
         print("NAME:", extracted_name)
         print("====================\n")
 
+
+        extracted_name = extracted_name.strip()
+
         return clean_text, cert_id, extracted_name, quality_status
 
     except Exception as e:
         print("ERROR:", e)
         return "", "NOT_FOUND", "NOT FOUND", "ERROR"
+def draw_detected_boxes(image_path, name, cert_id):
+
+    img = cv2.imread(image_path)
+    if img is None:
+        return None
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    data = pytesseract.image_to_data(gray, output_type=pytesseract.Output.DICT)
+
+    for i, word in enumerate(data['text']):
+        word = word.strip().upper()
+
+        if not word:
+            continue
+
+        # match name
+        if name != "NOT FOUND":
+            for part in name.split():
+                if part in word:
+                    x, y, w, h = data['left'][i], data['top'][i], data['width'][i], data['height'][i]
+                    cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+
+        # match ID
+        if cert_id != "NOT_FOUND" and cert_id in word:
+            x, y, w, h = data['left'][i], data['top'][i], data['width'][i], data['height'][i]
+            cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
+
+    filename = "boxed_" + os.path.basename(image_path)
+    output_path = os.path.join("static/uploads", filename)
+
+    cv2.imwrite(output_path, img)
+
+    return f"uploads/{filename}"

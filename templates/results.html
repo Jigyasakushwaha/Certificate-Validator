@@ -106,6 +106,62 @@ button {
     border-radius: 8px;
     cursor: pointer;
 }
+.stat-box.high {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.stat-box.medium {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+.stat-box.low {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+/* 🔥 HOVER GLOW FOR CARDS */
+.stat-box {
+    transition: all 0.3s ease;
+}
+
+.stat-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(109, 40, 217, 0.2);
+}
+
+/* 🔥 STATUS GLOW */
+.status.AUTHENTIC {
+    box-shadow: 0 0 10px rgba(34,197,94,0.5);
+}
+
+.status.INVALID,
+.status.MISMATCH {
+    box-shadow: 0 0 10px rgba(239,68,68,0.5);
+}
+
+/* 🔥 BUTTON EFFECT */
+button {
+    transition: all 0.25s ease;
+}
+
+button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(109, 40, 217, 0.4);
+}
+
+/* 🔥 IMAGE HOVER */
+.img-preview img {
+    transition: all 0.3s ease;
+}
+
+.img-preview img:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
 </style>
 </head>
 
@@ -123,25 +179,50 @@ button {
 
         <!-- STATS -->
         <div class="stat-grid">
-            {% if score is defined %}
-            <div class="stat-box">
-                Forgery Risk<br><strong>{{ score }}%</strong>
-            </div>
+    {% if score is defined %}
 
-            <div class="stat-box">
-                Image Quality<br><strong>{{ quality }}</strong>
-            </div>
+    <div class="stat-box">
+        Forgery Risk<br><strong>{{ score }}%</strong>
+    </div>
 
-            <div class="stat-box">
-                Integrity<br><strong>{{ 100 - score }}%</strong>
-            </div>
-            {% endif %}
-        </div>
+    <div class="stat-box">
+        Image Quality<br><strong>{{ quality }}</strong>
+    </div>
 
+    <div class="stat-box">
+        Integrity<br><strong>{{ 100 - score }}%</strong>
+    </div>
+
+    <!-- 🔥 NEW CONFIDENCE BOX -->
+     {% if mode != "QUALITY ANALYSIS" %}
+
+<div class="stat-box">
+    Confidence<br>
+    <strong>{{ confidence }}%</strong>
+
+    <div style="margin-top:5px; font-size:12px;">
+        {% if confidence >= 80 %}
+            🟢 High Trust
+        {% elif confidence >= 50 %}
+            🟡 Medium Trust
+        {% else %}
+            🔴 Low Trust
+        {% endif %}
+    </div>
+</div>
+
+{% endif %}
+
+{% endif %}   
+</div>
         <!-- 🔥 EXTRACTED DATA -->
         <div class="stat-grid">
+            
+            {% if mode != "QUALITY ANALYSIS" %}
             <div class="stat-box">
-                Detected ID<br><strong>{{ cert_id }}</strong>
+    Detected ID<br><strong>{{ cert_id }}</strong>
+</div>
+{% endif %}
             </div>
 
             {% if extracted_name %}
@@ -161,15 +242,31 @@ button {
         <!-- IMAGES -->
         {% if forensic_img %}
         <div class="img-preview">
-            <div>
-                <small>Original</small><br>
-                <img src="{{ url_for('static', filename=original_img) }}">
-            </div>
-            <div>
-                <small>Forensic Scan</small><br>
-                <img src="{{ url_for('static', filename=forensic_img) }}">
-            </div>
-        </div>
+
+    <div>
+        <small>Original</small><br>
+        <img src="{{ url_for('static', filename=original_img) }}">
+    </div>
+
+    {% if boxed_img %}
+    <div>
+    <small>Detected Fields</small><br>
+    <img src="{{ url_for('static', filename=boxed_img) }}">
+    </div>
+    {% endif %}
+        
+    <div>
+        <small>Forensic Scan</small><br>
+        {% if mode != "VERIFICATION" and forensic_img %}
+<div>
+    <small>AI Tampering Heatmap</small><br>
+    <img src="{{ url_for('static', filename=forensic_img) }}">
+</div>
+{% endif %}
+    </div>
+
+</div>
+           
         {% endif %}
 
         <!-- ANALYSIS -->
@@ -179,11 +276,22 @@ button {
             {{ info }}
         </div>
         {% endif %}
+        <!-- 🧠 DECISION BREAKDOWN -->
+{% if decision_points %}
+<div class="section analysis">
+    <strong>🧠 Decision Breakdown:</strong>
+    <ul>
+        {% for point in decision_points %}
+        <li>{{ point }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 
         <!-- FORENSIC REPORT -->
         {% if report %}
         <div class="section report">
-            <strong>Forensic Report:</strong>
+            <strong>AI Risk Assessment:</strong>
             <ul>
                 {% for r in report %}
                 <li>{{ r }}</li>
@@ -195,7 +303,11 @@ button {
         <!-- BUTTON -->
         <div style="text-align:center;">
             <button onclick="window.location.href='/'">New Scan</button>
+                 <button onclick="window.location.href='/download-report'">
+                 Download Report
+                 </button>
         </div>
+   
 
     </div>
 </div>
