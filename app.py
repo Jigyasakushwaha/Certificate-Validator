@@ -163,7 +163,6 @@ def verify():
         db_data = doc.to_dict()
 
         official_name = str(db_data.get('Name', '')).upper().strip()
-        official_dob = str(db_data.get('DOB', '')).strip().replace("/", "-")
 
         # Normalize OCR
         ocr_clean = " ".join(raw_text.upper().split()).replace("/", "-")
@@ -172,29 +171,14 @@ def verify():
         name_parts = official_name.split()
         name_match = sum(1 for p in name_parts if p in ocr_clean) >= max(1, len(name_parts)//2)
 
-        # --- DOB CHECK ---
-        dob_pattern = r'\b\d{2}-\d{2}-\d{4}\b'
-        found_dobs = re.findall(dob_pattern, ocr_clean)
-
-        dob_present_in_cert = len(found_dobs) > 0
-        dob_match = official_dob in found_dobs
 
         # --- FINAL DECISION ---
         if not name_match:
-            status = "MISMATCH"
-            info = f"Name mismatch with registry ({official_name})"
-
+           status = "MISMATCH"
+           info = f"Name mismatch with registry ({official_name})"
         else:
-            if dob_present_in_cert:
-                if dob_match:
-                    status = "AUTHENTIC"
-                    info = f"Verified: {official_name} (DOB matched)"
-                else:
-                    status = "TAMPERED"
-                    info = f"DOB mismatch! Expected {official_dob}"
-            else:
-                status = "AUTHENTIC"
-                info = f"Verified: {official_name} (No DOB found)"
+           status = "AUTHENTIC"
+           info = f"Verified: {official_name}"
                 
 
 
