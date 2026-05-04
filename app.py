@@ -26,6 +26,7 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 
+
 # --- HOME ROUTE ---
 @app.route('/')
 def index():
@@ -175,7 +176,7 @@ def verify():
         # --- FINAL DECISION ---
         if not name_match:
            status = "MISMATCH"
-           info = f"Name mismatch with registry ({official_name})"
+           info = f"⚠ Identity mismatch detected (Registry: {official_name})"
         else:
            status = "AUTHENTIC"
            info = f"Verified: {official_name}"

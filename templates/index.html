@@ -1,159 +1,860 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>AI Alchemist - Certificate Validator</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CertVerify — Academic Certificate Validator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg:        #f0f4f8;
+            --white:     #ffffff;
+            --card:      #ffffff;
+            --border:    #dde3ec;
+            --blue:      #2563eb;
+            --blue-dk:   #1d4ed8;
+            --blue-lt:   #eff6ff;
+            --blue-mid:  #dbeafe;
+            --green:     #059669;
+            --green-lt:  #ecfdf5;
+            --amber:     #d97706;
+            --amber-lt:  #fffbeb;
+            --text:      #0f172a;
+            --text-2:    #334155;
+            --text-3:    #64748b;
+            --text-4:    #94a3b8;
+            --font:      'Plus Jakarta Sans', sans-serif;
+            --font-serif:'Lora', serif;
+            --radius:    12px;
+            --radius-lg: 18px;
+            --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+            --shadow-lg: 0 2px 8px rgba(0,0,0,0.06), 0 12px 40px rgba(0,0,0,0.12);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: #f3f0ff;
-            color: #1f2937;
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 40px auto;
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        /* ─── TOP NAV ─── */
+        .topbar {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 0 var(--border);
         }
 
-        h2 {
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .brand-logo {
+            width: 34px; height: 34px;
+            background: var(--blue);
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+
+        .brand-name {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -.02em;
+        }
+
+        .brand-name span { color: var(--blue); }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--green-lt);
+            border: 1px solid #a7f3d0;
+            color: var(--green);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 13px;
+            border-radius: 999px;
+        }
+
+        .status-dot {
+            width: 7px; height: 7px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%,100% { opacity:1; transform:scale(1); }
+            50%      { opacity:.4; transform:scale(.7); }
+        }
+
+        /* ─── HERO ─── */
+        .hero {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 28px 24px 24px;
             text-align: center;
-            color: #1e1b4b;
         }
 
-        .mode-selector {
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--blue-lt);
+            border: 1px solid var(--blue-mid);
+            color: var(--blue);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            padding: 4px 13px;
+            border-radius: 999px;
+            margin-bottom: 12px;
+        }
+
+        .hero h1 {
+            font-size: clamp(1.45rem, 3vw, 2rem);
+            font-weight: 800;
+            letter-spacing: -.025em;
+            color: var(--text);
+            line-height: 1.2;
+        }
+
+        .hero h1 em {
+            font-family: var(--font-serif);
+            font-style: italic;
+            font-weight: 500;
+            color: var(--blue);
+        }
+
+        .hero p {
+            margin-top: 9px;
+            color: var(--text-3);
+            font-size: 13.5px;
+            line-height: 1.65;
+            max-width: 500px;
+            margin-inline: auto;
+        }
+
+        /* ─── MAIN ─── */
+        .main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 28px 18px 60px;
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 18px;
+            align-items: start;
+        }
+
+        /* ─── FORM CARD ─── */
+        .form-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card-head {
+            padding: 22px 26px 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+            margin-bottom: 0;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .card-sub { font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
+
+        .card-body { padding: 22px 26px 26px; }
+
+        /* ─── SECTION LABEL ─── */
+        .sec-lbl {
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--text-4);
+            margin-bottom: 9px;
+        }
+
+        /* ─── MODE SELECTOR ─── */
+        .mode-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 10px;
+            margin-bottom: 24px;
         }
 
         .mode-card {
-            border: 2px solid #e5e7eb;
-            padding: 18px;
-            border-radius: 12px;
+            position: relative;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 14px 14px 42px;
             cursor: pointer;
-            text-align: center;
-            transition: 0.3s;
+            transition: border-color .18s, background .18s, box-shadow .15s;
+            background: #f8fafc;
+        }
+
+        .mode-card:hover {
+            border-color: #93c5fd;
+            background: var(--blue-lt);
         }
 
         .mode-card.active {
-            border-color: #6d28d9;
-            background: #f5f3ff;
+            border-color: var(--blue);
+            background: var(--blue-lt);
+            box-shadow: 0 0 0 3px rgba(37,99,235,.1);
         }
 
-        .mode-card input {
-            display: none;
+        .mode-card input[type="radio"] { display: none; }
+
+        .mode-radio {
+            position: absolute;
+            left: 13px; top: 50%;
+            transform: translateY(-50%);
+            width: 18px; height: 18px;
+            border: 2px solid #cbd5e1;
+            border-radius: 50%;
+            background: var(--white);
+            display: flex; align-items: center; justify-content: center;
+            transition: border-color .18s;
+            flex-shrink: 0;
         }
 
-        .upload-area {
-            border: 2px dashed #c4b5fd;
-            padding: 40px;
+        .mode-radio::after {
+            content: '';
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--blue);
+            opacity: 0;
+            transform: scale(0);
+            transition: opacity .18s, transform .18s;
+        }
+
+        .mode-card.active .mode-radio { border-color: var(--blue); }
+        .mode-card.active .mode-radio::after { opacity: 1; transform: scale(1); }
+
+        .mode-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.2;
+        }
+
+        .mode-desc {
+            font-size: 11.5px;
+            color: var(--text-3);
+            margin-top: 4px;
+            line-height: 1.45;
+        }
+
+        /* ─── DIVIDER ─── */
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 18px 0;
+        }
+
+        /* ─── UPLOAD ZONE ─── */
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: var(--radius);
+            padding: 30px 20px;
             text-align: center;
-            border-radius: 12px;
             cursor: pointer;
-            background: #f9f7ff;
+            background: #f8fafc;
+            transition: border-color .2s, background .2s, transform .15s;
         }
 
-        button {
-            margin-top: 25px;
+        .upload-zone:hover {
+            border-color: #93c5fd;
+            background: var(--blue-lt);
+            transform: translateY(-2px);
+        }
+
+        .upload-zone.drag-over {
+            border-color: var(--blue);
+            background: var(--blue-lt);
+        }
+
+        .upload-zone.has-file {
+            border-color: var(--green);
+            border-style: solid;
+            background: var(--green-lt);
+        }
+
+        .upl-icon {
+            width: 50px; height: 50px;
+            background: var(--white);
+            border: 1.5px solid var(--border);
+            border-radius: 13px;
+            margin: 0 auto 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+            transition: transform .25s;
+        }
+
+        .upload-zone:hover .upl-icon { transform: translateY(-3px); }
+
+        .upl-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-2);
+        }
+
+        .upl-sub {
+            font-size: 12px;
+            color: var(--text-3);
+            margin-top: 3px;
+        }
+
+        .fmt-row {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-top: 12px;
+        }
+
+        .fmt {
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: .04em;
+            color: var(--text-3);
+            background: var(--white);
+            border: 1px solid var(--border);
+            padding: 3px 9px;
+            border-radius: 999px;
+        }
+
+        /* ─── FILE PREVIEW ─── */
+        .fp {
+            display: none;
+            margin-top: 12px;
+            background: var(--white);
+            border: 1.5px solid #a7f3d0;
+            border-radius: 10px;
+            padding: 10px 14px;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fp.show { display: flex; }
+
+        .fp-ico {
+            width: 34px; height: 34px;
+            background: var(--green-lt);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .fp-info { flex: 1; min-width: 0; }
+
+        .fp-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .fp-sz { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+        .fp-rm {
+            background: none; border: none;
+            color: #94a3b8; cursor: pointer;
+            font-size: 18px; line-height: 1;
+            padding: 2px 4px;
+            transition: color .15s;
+            width: auto; margin: 0;
+        }
+
+        .fp-rm:hover { color: #ef4444; }
+
+        /* ─── SUBMIT ─── */
+        .submit-btn {
+            margin-top: 18px;
             width: 100%;
             padding: 15px;
             border: none;
-            border-radius: 10px;
-            background: #6d28d9;
-            color: white;
-            font-weight: 700;
+            border-radius: var(--radius);
+            background: var(--blue);
+            color: #fff;
+            font-family: var(--font);
+            font-size: 14.5px;
+            font-weight: 800;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background .18s, transform .14s, box-shadow .18s;
+            box-shadow: 0 2px 10px rgba(37,99,235,.22);
         }
 
-        .note {
+        .submit-btn:hover:not(:disabled) {
+            background: var(--blue-dk);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(37,99,235,.3);
+        }
+
+        .submit-btn:active:not(:disabled) { transform: translateY(0); }
+
+        .submit-btn:disabled {
+            background: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* ─── SIDEBAR ─── */
+        .sidebar { display: flex; flex-direction: column; gap: 14px; }
+
+        .side-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 18px 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .side-title {
             font-size: 13px;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 13px;
+        }
+
+        .steps-list { display: flex; flex-direction: column; }
+
+        .s-item {
+            display: flex;
+            gap: 11px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .s-item:first-child { padding-top: 0; }
+        .s-item:last-child  { border-bottom: none; padding-bottom: 0; }
+
+        .s-num {
+            width: 23px; height: 23px;
+            border-radius: 50%;
+            background: var(--blue-lt);
+            border: 1.5px solid var(--blue-mid);
+            color: var(--blue);
+            font-size: 11px;
+            font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .s-txt { font-size: 12px; color: var(--text-2); line-height: 1.55; }
+        .s-txt strong { display: block; font-weight: 700; color: var(--text); }
+
+        .tech-list { display: flex; flex-direction: column; gap: 8px; }
+
+        .tech-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 11px;
+            background: var(--bg);
+            border-radius: 9px;
+        }
+
+        .tech-ico { font-size: 16px; flex-shrink: 0; }
+
+        .tech-name { font-size: 12px; font-weight: 700; color: var(--text-2); }
+        .tech-desc { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+        /* ─── LOADING ─── */
+        .ld-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(240,244,248,.87);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ld-overlay.on { display: flex; }
+
+        .ld-box {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 36px 48px;
             text-align: center;
-            color: #6b7280;
-            margin-top: 10px;
+            box-shadow: var(--shadow-lg);
+            min-width: 280px;
+        }
+
+        .ld-ring {
+            width: 46px; height: 46px;
+            border: 3px solid var(--blue-mid);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        .ld-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+        .ld-sub   { font-size: 12.5px; color: var(--text-3); }
+
+        .ld-bar-wrap {
+            margin-top: 16px;
+            height: 3px;
+            background: var(--blue-mid);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .ld-bar {
+            height: 100%;
+            background: var(--blue);
+            border-radius: 999px;
+            animation: barSlide 3.5s ease-in-out infinite;
+        }
+
+        @keyframes barSlide {
+            0%   { width: 6%;  margin-left: 0; }
+            50%  { width: 55%; margin-left: 25%; }
+            100% { width: 6%;  margin-left: 94%; }
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 680px) {
+            .main { grid-template-columns: 1fr; padding: 16px 14px 50px; }
+            .sidebar { order: -1; }
+            .mode-grid { grid-template-columns: 1fr; }
+            .topbar { padding: 0 16px; }
         }
     </style>
 </head>
-
 <body>
 
-<div class="container">
+<!-- LOADING -->
+<div class="ld-overlay" id="ldOverlay">
+    <div class="ld-box">
+        <div class="ld-ring"></div>
+        <div class="ld-title" id="ldTitle">Analyzing Certificate…</div>
+        <div class="ld-sub"   id="ldSub">Running OCR extraction</div>
+        <div class="ld-bar-wrap"><div class="ld-bar"></div></div>
+    </div>
+</div>
 
-    <h2>Certificate Verification Portal</h2>
+<!-- NAV -->
+<nav class="topbar">
+    <a class="brand" href="#">
+        <div class="brand-logo">🎓</div>
+        <span class="brand-name">Cert<span>Verify</span></span>
+    </a>
+    <div class="status-pill">
+        <span class="status-dot"></span>
+        System Online
+    </div>
+</nav>
 
-    <form id="verifyForm">
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-tag">🛡️ AI-Powered Certificate Validator</div>
+    <h1>Academic Certificate <em>Authenticity</em> Validator</h1>
+    <p>Instantly verify academic certificates using OCR extraction, official database cross-checking, and ELA forensic tamper detection.</p>
+</div>
 
-        <!-- MODE SELECTOR -->
-        <div class="mode-selector">
+<!-- MAIN GRID -->
+<div class="main">
 
-            <label class="mode-card active">
-                <input type="radio" name="mode" value="verify" checked>
-                <strong>✔ Verification Mode</strong><br>
-                <small>Check authenticity using database</small>
-            </label>
-
-            <label class="mode-card">
-                <input type="radio" name="mode" value="quality">
-                <strong>🔍 Quality Check</strong><br>
-                <small>Analyze image & tampering only</small>
-            </label>
-
+    <!-- FORM CARD -->
+    <div class="form-card">
+        <div class="card-head">
+            <div class="card-title">Upload & Verify</div>
+            <div class="card-sub">Choose a verification mode, then upload a clear certificate image.</div>
         </div>
 
-        <!-- UPLOAD -->
-        <label for="fileInput" class="upload-area">
-            <strong>Click to Upload Certificate</strong>
-            <div class="note">Upload a clear image for best results</div>
-        </label>
+        <div class="card-body">
+            <form id="verifyForm">
 
-        <input type="file" id="fileInput" name="file" style="display:none" required>
+                <!-- STEP 1: MODE -->
+                <div class="sec-lbl">Step 1 — What do you want to do?</div>
+                <div class="mode-grid">
 
-        <div id="fileName" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
+                    <label class="mode-card active" id="cardVerify">
+                        <input type="radio" name="mode" value="verify" checked>
+                        <div class="mode-radio"></div>
+                        <div class="mode-label">🛡️ Full Verification</div>
+                        <div class="mode-desc">Extracts certificate ID &amp; name via OCR, then checks against the official database to confirm the certificate is real and unaltered.</div>
+                    </label>
 
-        <button type="submit">Run Analysis</button>
+                    <label class="mode-card" id="cardQuality">
+                        <input type="radio" name="mode" value="quality">
+                        <div class="mode-radio"></div>
+                        <div class="mode-label">🔬 Image Forensics Only</div>
+                        <div class="mode-desc">Checks image clarity and runs an ELA tamper scan to detect pixel-level edits — no database lookup. Useful for a quick forgery scan.</div>
+                    </label>
 
-    </form>
+                </div>
 
+                <div class="divider"></div>
+
+                <!-- STEP 2: UPLOAD -->
+                <div class="sec-lbl">Step 2 — Upload Certificate Image</div>
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upl-icon" id="uplIcon">📄</div>
+                    <div class="upl-title">Drop image here or click to browse</div>
+                    <div class="upl-sub">Use a clear, flat scan for best OCR accuracy</div>
+                    <div class="fmt-row">
+                        <span class="fmt">PNG</span>
+                        <span class="fmt">JPG</span>
+                        <span class="fmt">JPEG</span>
+                    </div>
+                </div>
+
+                <input type="file" id="fileInput" name="file"
+                       accept=".png,.jpg,.jpeg,image/png,image/jpeg"
+                       style="display:none" required>
+
+                <div class="fp" id="fpBar">
+                    <div class="fp-ico">✅</div>
+                    <div class="fp-info">
+                        <div class="fp-name" id="fpName">—</div>
+                        <div class="fp-sz"   id="fpSz">—</div>
+                    </div>
+                    <button type="button" class="fp-rm" id="fpRm" title="Remove">✕</button>
+                </div>
+
+                <!-- SUBMIT -->
+                <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                    <span id="btnIco">⚡</span>
+                    <span id="btnTxt">Run Analysis</span>
+                </button>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+        <!-- How it works -->
+        <div class="side-card">
+            <div class="side-title">📋 How It Works</div>
+            <div class="steps-list">
+                <div class="s-item">
+                    <div class="s-num">1</div>
+                    <div class="s-txt">
+                        <strong>Pick a Mode</strong>
+                        Choose Full Verification for a complete authenticity check, or Image Forensics for a tamper-only scan.
+                    </div>
+                </div>
+                <div class="s-item">
+                    <div class="s-num">2</div>
+                    <div class="s-txt">
+                        <strong>Upload the Certificate</strong>
+                        Upload a PNG or JPG scan. Keep it well-lit, flat and fully in frame.
+                    </div>
+                </div>
+                <div class="s-item">
+                    <div class="s-num">3</div>
+                    <div class="s-txt">
+                        <strong>AI Processes It</strong>
+                        OCR reads the certificate ID &amp; holder name. The ID is matched against the Firebase registry.
+                    </div>
+                </div>
+                <div class="s-item">
+                    <div class="s-num">4</div>
+                    <div class="s-txt">
+                        <strong>View Results</strong>
+                        See the authenticity verdict, tamper score, forensic heatmap, and full report.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tech Stack -->
+        <div class="side-card">
+            <div class="side-title">⚙️ Powered By</div>
+            <div class="tech-list">
+                <div class="tech-row">
+                    <span class="tech-ico">🔍</span>
+                    <div>
+                        <div class="tech-name">Tesseract OCR</div>
+                        <div class="tech-desc">Extracts text, ID &amp; name from the image</div>
+                    </div>
+                </div>
+                <div class="tech-row">
+                    <span class="tech-ico">🗄️</span>
+                    <div>
+                        <div class="tech-name">Firebase Registry</div>
+                        <div class="tech-desc">Validates certificate against official records</div>
+                    </div>
+                </div>
+                <div class="tech-row">
+                    <span class="tech-ico">🧬</span>
+                    <div>
+                        <div class="tech-name">ELA Forensics</div>
+                        <div class="tech-desc">Error Level Analysis to spot tampered pixels</div>
+                    </div>
+                </div>
+                <div class="tech-row">
+                    <span class="tech-ico">👁️</span>
+                    <div>
+                        <div class="tech-name">OpenCV</div>
+                        <div class="tech-desc">Blur detection &amp; image quality assessment</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="side-card" style="background:var(--amber-lt); border-color:#fde68a;">
+            <div class="side-title" style="color:var(--amber);">💡 Tips for Best Results</div>
+            <div style="font-size:12px; color:#78350f; line-height:1.75;">
+                • Scan on a <strong>flat, well-lit surface</strong><br>
+                • Ensure the <strong>full certificate is in frame</strong><br>
+                • Use <strong>PNG or JPG</strong> for best OCR accuracy<br>
+                • Avoid heavily <strong>rotated or crumpled</strong> images
+            </div>
+        </div>
+
+    </div>
 </div>
 
 <script>
+    const fileInput  = document.getElementById('fileInput');
+    const zone       = document.getElementById('uploadZone');
+    const uplIcon    = document.getElementById('uplIcon');
+    const fpBar      = document.getElementById('fpBar');
+    const fpName     = document.getElementById('fpName');
+    const fpSz       = document.getElementById('fpSz');
+    const fpRm       = document.getElementById('fpRm');
+    const submitBtn  = document.getElementById('submitBtn');
+    const btnTxt     = document.getElementById('btnTxt');
+    const btnIco     = document.getElementById('btnIco');
+    const form       = document.getElementById('verifyForm');
+    const ldOverlay  = document.getElementById('ldOverlay');
+    const ldTitle    = document.getElementById('ldTitle');
+    const ldSub      = document.getElementById('ldSub');
 
-    // Mode selection highlight
+    /* MODE CARDS */
     document.querySelectorAll('.mode-card').forEach(card => {
         card.addEventListener('click', () => {
             document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
+            const val = card.querySelector('input[type="radio"]').value;
+            btnTxt.textContent = val === 'quality' ? 'Run Forensic Scan' : 'Run Analysis';
+            btnIco.textContent = val === 'quality' ? '🔬' : '⚡';
         });
     });
 
-    // Show file name
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-        document.getElementById('fileName').innerText = e.target.files[0].name;
+    /* UPLOAD */
+    zone.addEventListener('click', () => fileInput.click());
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+        e.preventDefault(); zone.classList.remove('drag-over');
+        const f = e.dataTransfer.files[0];
+        if (f && /image\/(png|jpeg)/.test(f.type)) apply(f);
+        else if (f) alert('Only PNG and JPG files are supported.');
+    });
+    fileInput.addEventListener('change', e => { if (e.target.files[0]) apply(e.target.files[0]); });
+
+    function apply(f) {
+        fpName.textContent = f.name;
+        fpSz.textContent   = fmt(f.size);
+        fpBar.classList.add('show');
+        zone.classList.add('has-file');
+        uplIcon.textContent = '✅';
+        submitBtn.disabled  = false;
+        const dt = new DataTransfer(); dt.items.add(f); fileInput.files = dt.files;
+    }
+
+    function fmt(b) {
+        if (b < 1024)    return b + ' B';
+        if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+        return (b/1048576).toFixed(1) + ' MB';
+    }
+
+    fpRm.addEventListener('click', e => {
+        e.stopPropagation();
+        fileInput.value = '';
+        fpBar.classList.remove('show');
+        zone.classList.remove('has-file');
+        uplIcon.textContent = '📄';
+        submitBtn.disabled  = true;
     });
 
-    // Submit form
-    document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+    /* SUBMIT */
+    const msgs = {
+        verify:  [
+            { t: 'Analyzing Certificate…',     s: 'Running OCR text extraction' },
+            { t: 'Extracting Certificate ID…',  s: 'Detecting roll numbers & identifiers' },
+            { t: 'Querying Registry…',           s: 'Checking Firebase database records' },
+            { t: 'Running ELA Forensic Scan…',  s: 'Detecting tampered image regions' },
+        ],
+        quality: [
+            { t: 'Checking Image Quality…', s: 'Measuring sharpness & blur level' },
+            { t: 'Running ELA Analysis…',   s: 'Detecting pixel-level manipulations' },
+        ]
+    };
+
+    let tmr;
+
+    form.addEventListener('submit', async e => {
         e.preventDefault();
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const list = msgs[mode]; let i = 0;
+        ldTitle.textContent = list[0].t;
+        ldSub.textContent   = list[0].s;
+        ldOverlay.classList.add('on');
+        tmr = setInterval(() => {
+            i = (i + 1) % list.length;
+            ldTitle.textContent = list[i].t;
+            ldSub.textContent   = list[i].s;
+        }, 2000);
 
-        const formData = new FormData(e.target);
-
-        const res = await fetch('/verify', {
-            method: 'POST',
-            body: formData
-        });
-
-        const html = await res.text();
-        document.open();
-        document.write(html);
-        document.close();
+        try {
+            const res  = await fetch('/verify', { method: 'POST', body: new FormData(form) });
+            const html = await res.text();
+            clearInterval(tmr);
+            document.open(); document.write(html); document.close();
+        } catch {
+            clearInterval(tmr);
+            ldOverlay.classList.remove('on');
+            alert('Connection error. Please try again.');
+        }
     });
-
 </script>
-
 </body>
 </html>
