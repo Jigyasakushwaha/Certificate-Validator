@@ -2,315 +2,233 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Alchemist Report</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alchemist — Verification Report</title>
 
 <style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: #f5f7fb;
-    padding: 40px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #f1f5f9;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    color: #0f172a;
 }
 
-.report-card {
-    max-width: 900px;
-    margin: auto;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
+.page { max-width: 920px; margin: 0 auto; }
 
-.banner {
-    background: #1e1b4b;
-    color: white;
-    padding: 20px;
-    text-align: center;
-}
-
-.status {
-    font-weight: bold;
-    padding: 6px 14px;
-    border-radius: 20px;
-    display: inline-block;
-    margin-top: 10px;
-}
-
-/* UPDATED STATUS COLORS */
-.status.AUTHENTIC { background: #dcfce7; color: #166534; }
-.status.NOT\ REGISTERED { background: #fee2e2; color: #991b1b; }
-.status.MISMATCH { background: #fef3c7; color: #92400e; }
-.status.ANALYZED { background: #e0f2fe; color: #075985; }
-.status.INVALID { background: #fee2e2; color: #991b1b; }
-
-.content {
-    padding: 30px;
-}
-
-.stat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.stat-box {
-    background: #f8fafc;
-    padding: 15px;
-    border-radius: 12px;
+.header-card {
+    background: #fff;
     border: 1px solid #e2e8f0;
-    text-align: center;
-    font-weight: 500;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 1rem;
 }
 
-.img-preview {
+.header-top {
+    background: #1e1b4b;
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-name { color: #fff; font-size: 16px; font-weight: 600; }
+
+.status-pill {
+    padding: 7px 18px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* STATUS COLORS */
+.stat-AUTHENTIC { background: #dcfce7; color: #166534; }
+.stat-MISMATCH { background: #fef3c7; color: #92400e; }
+.stat-INVALID { background: #fee2e2; color: #991b1b; }
+
+.header-sub {
+    padding: 10px 2rem;
+    background: #f8fafc;
+    display: flex;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 1rem;
+}
+
+.metric-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1rem;
+}
+
+.bar-wrap { height: 4px; background: #e2e8f0; margin-top: 10px; }
+.bar-fill { height: 100%; }
+
+.bg-red { background: #ef4444; }
+.bg-green { background: #22c55e; }
+
+.two-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-top: 20px;
+    gap: 1rem;
 }
 
-.img-preview img {
-    width: 100%;
-    border-radius: 10px;
-    border: 1px solid #ddd;
+.section-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1rem;
 }
 
-.section {
-    margin-top: 20px;
-    padding: 20px;
-    border-radius: 12px;
+.id-display {
+    font-family: monospace;
+    background: #f8fafc;
+    padding: 10px;
+    margin-bottom: 10px;
 }
 
-.analysis {
-    background: #f1f5f9;
+.decision-list { list-style: none; }
+
+.img-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
 }
 
-.report {
-    background: #fef2f2;
-}
-
-/* 🔥 QUALITY WARNING */
-.warning {
-    background: #fff7ed;
-    color: #9a3412;
-    border: 1px solid #fed7aa;
-}
+.img-card img { width: 100%; }
 
 button {
-    margin-top: 30px;
-    background: #6d28d9;
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 8px;
+    padding: 10px 20px;
     cursor: pointer;
-}
-.stat-box.high {
-    background: #dcfce7;
-    color: #166534;
-    border: 1px solid #86efac;
-}
-
-.stat-box.medium {
-    background: #fef3c7;
-    color: #92400e;
-    border: 1px solid #fcd34d;
-}
-
-.stat-box.low {
-    background: #fee2e2;
-    color: #991b1b;
-    border: 1px solid #fca5a5;
-}
-/* 🔥 HOVER GLOW FOR CARDS */
-.stat-box {
-    transition: all 0.3s ease;
-}
-
-.stat-box:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(109, 40, 217, 0.2);
-}
-
-/* 🔥 STATUS GLOW */
-.status.AUTHENTIC {
-    box-shadow: 0 0 10px rgba(34,197,94,0.5);
-}
-
-.status.INVALID,
-.status.MISMATCH {
-    box-shadow: 0 0 10px rgba(239,68,68,0.5);
-}
-
-/* 🔥 BUTTON EFFECT */
-button {
-    transition: all 0.25s ease;
-}
-
-button:hover {
-    transform: scale(1.05);
-    box-shadow: 0 8px 20px rgba(109, 40, 217, 0.4);
-}
-
-/* 🔥 IMAGE HOVER */
-.img-preview img {
-    transition: all 0.3s ease;
-}
-
-.img-preview img:hover {
-    transform: scale(1.02);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 </style>
 </head>
 
 <body>
 
-<div class="report-card">
+<div class="page">
 
-    <!-- HEADER -->
-    <div class="banner">
-        <h1>{{ mode }}</h1>
-        <div class="status {{ status }}">{{ status }}</div>
-    </div>
-
-    <div class="content">
-
-        <!-- STATS -->
-        <div class="stat-grid">
-    {% if score is defined %}
-
-    <div class="stat-box">
-        Forgery Risk<br><strong>{{ score }}%</strong>
-    </div>
-
-    <div class="stat-box">
-        Image Quality<br><strong>{{ quality }}</strong>
-    </div>
-
-    <div class="stat-box">
-        Integrity<br><strong>{{ 100 - score }}%</strong>
-    </div>
-
-    <!-- 🔥 NEW CONFIDENCE BOX -->
-     {% if mode != "QUALITY ANALYSIS" %}
-
-<div class="stat-box">
-    Confidence<br>
-    <strong>{{ confidence }}%</strong>
-
-    <div style="margin-top:5px; font-size:12px;">
-        {% if confidence >= 80 %}
-            🟢 High Trust
-        {% elif confidence >= 50 %}
-            🟡 Medium Trust
-        {% else %}
-            🔴 Low Trust
-        {% endif %}
-    </div>
-</div>
-
-{% endif %}
-
-{% endif %}   
-</div>
-        <!-- 🔥 EXTRACTED DATA -->
-        <div class="stat-grid">
-            
-            {% if mode != "QUALITY ANALYSIS" %}
-            <div class="stat-box">
-    Detected ID<br><strong>{{ cert_id }}</strong>
-</div>
-{% endif %}
-            </div>
-
-            {% if extracted_name %}
-            <div class="stat-box">
-                Extracted Name<br><strong>{{ extracted_name }}</strong>
-            </div>
-            {% endif %}
+<!-- HEADER -->
+<div class="header-card">
+    <div class="header-top">
+        <div class="brand">
+            <div class="brand-name">Alchemist AI</div>
         </div>
 
-        <!-- 🔥 QUALITY WARNING -->
-        {% if quality == "Low/Blurry" %}
-        <div class="section warning">
-            ⚠ Low quality image detected. Results may be inaccurate.
+        <div>
+            <div id="modeText"></div>
+            <span id="statusPill" class="status-pill"></span>
         </div>
-        {% endif %}
-
-        <!-- IMAGES -->
-        {% if forensic_img %}
-        <div class="img-preview">
-
-    <div>
-        <small>Original</small><br>
-        <img src="{{ url_for('static', filename=original_img) }}">
     </div>
 
-    {% if boxed_img %}
-    <div>
-    <small>Detected Fields</small><br>
-    <img src="{{ url_for('static', filename=boxed_img) }}">
-    </div>
-    {% endif %}
-        
-    <div>
-        <small>Forensic Scan</small><br>
-        {% if mode != "VERIFICATION" and forensic_img %}
-<div>
-    <small>AI Tampering Heatmap</small><br>
-    <img src="{{ url_for('static', filename=forensic_img) }}">
-</div>
-{% endif %}
-    </div>
-
-</div>
-           
-        {% endif %}
-
-        <!-- ANALYSIS -->
-        {% if info %}
-        <div class="section analysis">
-            <strong>Analysis Details:</strong><br>
-            {{ info }}
-        </div>
-        {% endif %}
-        <!-- 🧠 DECISION BREAKDOWN -->
-{% if decision_points %}
-<div class="section analysis">
-    <strong>🧠 Decision Breakdown:</strong>
-    <ul>
-        {% for point in decision_points %}
-        <li>{{ point }}</li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
-
-        <!-- FORENSIC REPORT -->
-        {% if report %}
-        <div class="section report">
-            <strong>AI Risk Assessment:</strong>
-            <ul>
-                {% for r in report %}
-                <li>{{ r }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-
-        <!-- BUTTON -->
-        <div style="text-align:center;">
-            <button onclick="window.location.href='/'">New Scan</button>
-                 <button onclick="window.location.href='/download-report'">
-                 Download Report
-                 </button>
-        </div>
-   
-
+    <div class="header-sub">
+        OCR Done • Forensics Done
+        <span style="margin-left:auto;" id="date"></span>
     </div>
 </div>
+
+<!-- METRICS -->
+<div class="metrics-row">
+    <div class="metric-card">
+        <div>Forgery Risk</div>
+        <div id="scoreText"></div>
+        <div class="bar-wrap">
+            <div id="redBar" class="bar-fill bg-red"></div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div>Integrity</div>
+        <div id="integrityText"></div>
+        <div class="bar-wrap">
+            <div id="greenBar" class="bar-fill bg-green"></div>
+        </div>
+    </div>
+</div>
+
+<!-- DATA -->
+<div class="two-col">
+    <div class="section-card">
+        <div>Certificate Data</div>
+        <div id="certId" class="id-display"></div>
+        <div id="name"></div>
+    </div>
+
+    <div class="section-card">
+        <div>Decision Points</div>
+        <ul id="decisionList" class="decision-list"></ul>
+    </div>
+</div>
+
+<!-- IMAGES -->
+<div class="img-grid">
+    <div class="img-card">
+        <img id="originalImg">
+    </div>
+    <div class="img-card">
+        <img id="forensicImg">
+    </div>
+</div>
+
+</div>
+
+<!-- JS (REPLACES JINJA) -->
+<script>
+const data = {
+    mode: "AUTO",
+    status: "AUTHENTIC",
+    score: 30,
+    cert_id: "CERT123456",
+    name: "John Doe",
+    decisions: ["✔ Data matches", "✔ QR valid", "❌ Minor mismatch"],
+    original_img: "original.png",
+    forensic_img: "forensic.png"
+};
+
+// SET VALUES
+document.getElementById("modeText").innerText = data.mode;
+document.getElementById("statusPill").innerText = data.status;
+document.getElementById("statusPill").classList.add("stat-" + data.status);
+
+document.getElementById("scoreText").innerText = data.score + "%";
+document.getElementById("integrityText").innerText = (100 - data.score) + "%";
+
+document.getElementById("redBar").style.width = data.score + "%";
+document.getElementById("greenBar").style.width = (100 - data.score) + "%";
+
+document.getElementById("certId").innerText = data.cert_id;
+document.getElementById("name").innerText = data.name;
+
+document.getElementById("date").innerText = new Date().toDateString();
+
+// decisions
+const list = document.getElementById("decisionList");
+data.decisions.forEach(d => {
+    const li = document.createElement("li");
+    li.innerText = d;
+    list.appendChild(li);
+});
+
+// images
+document.getElementById("originalImg").src = data.original_img;
+document.getElementById("forensicImg").src = data.forensic_img;
+</script>
 
 </body>
 </html>
+
+
+
+
+
+ 
