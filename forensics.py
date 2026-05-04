@@ -89,30 +89,26 @@ def extract_certificate_data(image_path):
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        # 🔥 MULTI PREPROCESSING
+        # 🔥 Preprocessing
         thresh = cv2.adaptiveThreshold(
             gray, 255,
             cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY, 11, 2
         )
 
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
-
-        # 🔥 MULTI OCR (VERY IMPORTANT)
+        # 🔥 OCR
         text1 = pytesseract.image_to_string(thresh, config='--psm 6')
         text2 = pytesseract.image_to_string(gray, config='--psm 11')
 
         raw_text = (text1 + "\n" + text2).upper()
 
-        # Preserve structure
         lines = [l.strip() for l in raw_text.split("\n") if len(l.strip()) > 2]
 
-        # Clean version (for regex only)
         clean_text = re.sub(r'[^A-Z0-9\s\-\/]', ' ', raw_text)
         clean_text = re.sub(r'\s+', ' ', clean_text)
 
         # ============================
-        # 🔥 ID DETECTION (FINAL)
+        # 🔥 ID DETECTION
         # ============================
 
         cert_id = "NOT_FOUND"
@@ -131,48 +127,65 @@ def extract_certificate_data(image_path):
                 cert_id = match.group(0)
                 break
 
-        # ❌ remove junk like IFICATION
         if cert_id.endswith("IFICATION"):
             cert_id = "NOT_FOUND"
 
         # ============================
-        # 🔥 NAME DETECTION (FINAL)
+        # 🔥 NAME DETECTION (FIXED PROPERLY)
         # ============================
 
         extracted_name = "NOT FOUND"
-        name_candidates = []
 
-        ignore_words = [
-            "CERTIFICATE", "CERTIFICATION", "ONLINE",
-            "ACADEMY", "COURSE", "DATA", "PYTHON",
-            "SUMMARY", "PERFORMANCE", "SCORE",
-            "OF", "THE", "IN", "NPTEL"
-        ]
-
+        # STEP 1: "given to" pattern
         for i, line in enumerate(lines):
-            words = line.split()
+            if "GIVEN TO" in line or "AWARDED TO" in line or "PRESENTED TO" in line:
+                if i + 1 < len(lines):
+                    candidate = lines[i + 1].strip()
 
-            if 2 <= len(words) <= 3:
+                    if (
+                        2 <= len(candidate.split()) <= 3 and
+                        all(w.isalpha() for w in candidate.split())
+                    ):
+                        extracted_name = candidate
+                        break
 
-                if not all(w.isalpha() for w in words):
-                    continue
+        # STEP 2: fallback (center logic)
+        if extracted_name == "NOT FOUND":
 
-                if any(w in ignore_words for w in words):
-                    continue
+            name_candidates = []
 
-                if any(char.isdigit() for char in line):
-                    continue
+            ignore_words = [
+                "CERTIFICATE", "CERTIFICATION", "APPRECIATION",
+                "ONLINE", "ACADEMY", "COURSE", "DATA",
+                "PYTHON", "SUMMARY", "PERFORMANCE", "SCORE",
+                "OF", "THE", "IN", "NPTEL"
+            ]
 
-                if len(line) < 8 or len(line) > 25:
-                    continue
+            mid = len(lines) // 2
 
-                # center bias
-                score = abs(i - len(lines)//2)
+            for i, line in enumerate(lines):
+                words = line.split()
 
-                name_candidates.append((line, score))
+                if 2 <= len(words) <= 3:
 
-        if name_candidates:
-            extracted_name = sorted(name_candidates, key=lambda x: x[1])[0][0]
+                    if not all(w.isalpha() for w in words):
+                        continue
+
+                    if any(w in ignore_words for w in words):
+                        continue
+
+                    if any(char.isdigit() for char in line):
+                        continue
+
+                    if len(line) < 8 or len(line) > 30:
+                        continue
+
+                    score = abs(i - mid)
+
+                    name_candidates.append((line, score))
+
+            if name_candidates:
+                extracted_name = sorted(name_candidates, key=lambda x: x[1])[0][0]
 
         if len(extracted_name) < 5:
             extracted_name = "NOT FOUND"
@@ -182,7 +195,7 @@ def extract_certificate_data(image_path):
         # ============================
 
         print("\n===== OCR DEBUG =====")
-        print(clean_text[:300])
+        print("LINES:", lines)
         print("ID:", cert_id)
         print("NAME:", extracted_name)
         print("====================\n")
