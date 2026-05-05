@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -38,9 +39,7 @@ body {
 .status.INVALID { background: #fee2e2; color: #991b1b; }
 .status.ANALYZED { background: #e0f2fe; color: #075985; }
 
-.content {
-    padding: 30px;
-}
+.content { padding: 30px; }
 
 .stat-grid {
     display: grid;
@@ -56,12 +55,6 @@ body {
     border: 1px solid #e0e7ff;
     text-align: center;
     font-weight: 500;
-    transition: all 0.3s ease;
-}
-
-.stat-box:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(109, 40, 217, 0.2);
 }
 
 .stat-box.high { background: #dcfce7; }
@@ -79,54 +72,28 @@ body {
     width: 100%;
     border-radius: 10px;
     border: 1px solid #ddd;
-    transition: all 0.3s ease;
-}
-
-.img-preview img:hover {
-    transform: scale(1.02);
-}
-
-.id-display {
-    font-family: monospace;
-    background: #f8fafc;
-    padding: 10px;
-    margin-bottom: 10px;
-}
-
-.warning {
-    background: #fff7ed;
-    color: #9a3412;
-    border: 1px solid #fed7aa;
 }
 
 .analysis {
     background: #eef2ff;
     border-left: 4px solid #6366f1;
+    padding: 10px;
+    margin-top: 15px;
 }
 
 .analysis.danger {
     background: #fff1f2;
     border-left: 4px solid #ef4444;
-    animation: pulseDanger 1.5s infinite;
-}
-
-.analysis-text {
-    margin-top: 8px;
-    font-weight: 600;
-}
-
-@keyframes pulseDanger {
-    0% { box-shadow: 0 0 8px rgba(255, 77, 79, 0.2); }
-    50% { box-shadow: 0 0 18px rgba(255, 77, 79, 0.5); }
-    100% { box-shadow: 0 0 8px rgba(255, 77, 79, 0.2); }
 }
 
 button {
     padding: 10px 20px;
     cursor: pointer;
+    margin-top: 20px;
 }
 </style>
 </head>
+
 <body>
 
 <div class="page">
@@ -147,14 +114,9 @@ button {
         </div>
 
         <!-- STATS -->
-        {% if score is defined %}
         <div class="stat-grid">
 
-            <div class="stat-box 
-            {% if confidence >= 80 %}high
-            {% elif confidence >= 50 %}medium
-            {% else %}low
-            {% endif %}">
+            <div class="stat-box">
                 Forgery Risk<br><strong>{{ score }}%</strong>
             </div>
 
@@ -166,28 +128,11 @@ button {
                 Integrity<br><strong>{{ 100 - score }}%</strong>
             </div>
 
-            {% if mode != "QUALITY ANALYSIS" %}
-            <div class="stat-box">
-                Confidence<br><strong>{{ confidence }}%</strong>
-                <div style="height:6px; background:#e5e7eb; border-radius:6px; margin-top:8px;">
-                    <div style="width: {{ confidence }}%; background:#6366f1; height:100%; border-radius:6px;"></div>
-                </div>
-            </div>
-            {% endif %}
-
         </div>
-        {% endif %}
-
-        <!-- NAME -->
-        {% if extracted_name %}
-        <div class="stat-box">
-            Extracted Name<br><strong>{{ extracted_name }}</strong>
-        </div>
-        {% endif %}
 
         <!-- WARNING -->
         {% if quality == "Low/Blurry" %}
-        <div class="section warning">
+        <div class="analysis danger">
             ⚠ Low quality image detected
         </div>
         {% endif %}
@@ -207,27 +152,26 @@ button {
             </div>
             {% endif %}
 
-            {% if mode == "quality" and forensic_img %}
+            {% if forensic_img %}
             <div>
-            <small>Forensic Scan</small><br>
-            <img src="{{ url_for('static', filename=forensic_img) }}">
+                <small>Forensic Scan</small><br>
+                <img src="{{ url_for('static', filename=forensic_img) }}">
             </div>
             {% endif %}
 
         </div>
-    
 
         <!-- ANALYSIS -->
         {% if info %}
-        <div class="section analysis {% if status == 'MISMATCH' or status == 'INVALID' %}danger{% endif %}">
-            <strong>⚠ Analysis Details:</strong>
-            <div class="analysis-text">{{ info }}</div>
+        <div class="analysis {% if status == 'MISMATCH' or status == 'INVALID' %}danger{% endif %}">
+            <strong>Analysis:</strong>
+            <div>{{ info }}</div>
         </div>
         {% endif %}
 
         <!-- DECISION -->
         {% if decision_points %}
-        <div class="section analysis">
+        <div class="analysis">
             <strong>Decision Breakdown:</strong>
             <ul>
                 {% for point in decision_points %}
@@ -239,7 +183,7 @@ button {
 
         <!-- REPORT -->
         {% if report %}
-        <div class="section">
+        <div class="analysis">
             <strong>AI Risk Assessment:</strong>
             <ul>
                 {% for r in report %}
@@ -257,93 +201,6 @@ button {
 
     </div>
 </div>
-
-<!-- METRICS -->
-<div class="metrics-row">
-    <div class="metric-card">
-        <div>Forgery Risk</div>
-        <div id="scoreText"></div>
-        <div class="bar-wrap">
-            <div id="redBar" class="bar-fill bg-red"></div>
-        </div>
-    </div>
-
-    <div class="metric-card">
-        <div>Integrity</div>
-        <div id="integrityText"></div>
-        <div class="bar-wrap">
-            <div id="greenBar" class="bar-fill bg-green"></div>
-        </div>
-    </div>
-</div>
-
-<!-- DATA -->
-<div class="two-col">
-    <div class="section-card">
-        <div>Certificate Data</div>
-        <div id="certId" class="id-display"></div>
-        <div id="name"></div>
-    </div>
-
-    <div class="section-card">
-        <div>Decision Points</div>
-        <ul id="decisionList" class="decision-list"></ul>
-    </div>
-</div>
-
-<!-- IMAGES -->
-<div class="img-grid">
-    <div class="img-card">
-        <img id="originalImg">
-    </div>
-    <div class="img-card">
-        <img id="forensicImg">
-    </div>
-</div>
-
-</div>
-
-<!-- JS (REPLACES JINJA) -->
-<script>
-const data = {
-    mode: "AUTO",
-    status: "AUTHENTIC",
-    score: 30,
-    cert_id: "CERT123456",
-    name: "John Doe",
-    decisions: ["✔ Data matches", "✔ QR valid", "❌ Minor mismatch"],
-    original_img: "original.png",
-    forensic_img: "forensic.png"
-};
-
-// SET VALUES
-document.getElementById("modeText").innerText = data.mode;
-document.getElementById("statusPill").innerText = data.status;
-document.getElementById("statusPill").classList.add("stat-" + data.status);
-
-document.getElementById("scoreText").innerText = data.score + "%";
-document.getElementById("integrityText").innerText = (100 - data.score) + "%";
-
-document.getElementById("redBar").style.width = data.score + "%";
-document.getElementById("greenBar").style.width = (100 - data.score) + "%";
-
-document.getElementById("certId").innerText = data.cert_id;
-document.getElementById("name").innerText = data.name;
-
-document.getElementById("date").innerText = new Date().toDateString();
-
-// decisions
-const list = document.getElementById("decisionList");
-data.decisions.forEach(d => {
-    const li = document.createElement("li");
-    li.innerText = d;
-    list.appendChild(li);
-});
-
-// images
-document.getElementById("originalImg").src = data.original_img;
-document.getElementById("forensicImg").src = data.forensic_img;
-</script>
 
 </body>
 </html>
