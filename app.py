@@ -1,4 +1,5 @@
 import os
+import shutil
 import re
 import pytesseract
 import firebase_admin
@@ -10,8 +11,24 @@ from reportlab.lib.styles import getSampleStyleSheet
 from datetime import datetime
 from forensics import draw_detected_boxes
 
-# Tesseract path (Windows)
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+# ✅ ADD THIS HERE (IMPORTANT FOR DEPLOYMENT)
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+
+
+
+
+if os.name == "nt":
+    # Windows (your laptop)
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+else:
+    # Linux (Render)
+    tesseract_path = shutil.which("tesseract")
+    if tesseract_path:
+        pytesseract.pytesseract.tesseract_cmd = tesseract_path
 
 
 app = Flask(__name__)
@@ -367,6 +384,6 @@ def download_report():
 
     return send_file(file_path, as_attachment=True)
 
-# --- RUN SERVER ---
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
