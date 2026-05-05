@@ -10,13 +10,12 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from datetime import datetime
 from forensics import draw_detected_boxes
+import json   # ✅ ADDED (needed for env parsing
 
 
 # ✅ ADD THIS HERE (IMPORTANT FOR DEPLOYMENT)
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = "static/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-
 
 
 
@@ -35,11 +34,20 @@ app = Flask(__name__)
 app.secret_key = "hackathon_secret_key"
 UPLOAD_FOLDER = 'static/uploads'
 
-# --- FIREBASE INIT ---
+# --- FIREBASE INIT (RENDER SAFE / ENV VARIABLE METHOD) ---
+
+import json
+import os
+
 if not firebase_admin._apps:
-    cred = credentials.Certificate("firebase_key.json")
+    # 🔥 Firebase service account JSON stored in Render Environment Variable
+    firebase_info = json.loads(os.environ["FIREBASE_KEY"])
+
+    # 🔥 Initialize Firebase using JSON (no file needed)
+    cred = credentials.Certificate(firebase_info)
     firebase_admin.initialize_app(cred)
 
+# Firestore DB connection
 db = firestore.client()
 
 
